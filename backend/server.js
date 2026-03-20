@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const db = require("./config/db");
 const authRoutes = require("./routes/auth");
+const applicationRoutes = require("./routes/applications");
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: true })); // Parses URL-encoded bodies
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/applications", applicationRoutes);
 
 // Basic Health Check Route
 app.get("/api/health", async (req, res) => {
