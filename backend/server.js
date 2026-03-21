@@ -9,9 +9,10 @@ const applicationRoutes = require("./routes/applications");
 const app = express();
 
 // Middleware
+// backend/index.js or app.js
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: ["http://localhost:3000", process.env.FRONTEND_URL].filter(Boolean), // This safely removes undefined values if FRONTEND_URL is missing
   }),
 ); // Allows frontend to make requests to this API
 app.use(express.json()); // Parses incoming JSON payloads
