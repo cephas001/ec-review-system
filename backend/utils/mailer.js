@@ -5,15 +5,22 @@ const path = require("path");
 const Jimp = require("jimp");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  port: 587,
-  family: 4,
-  secure: false,
-  requireTLS: true,
   host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true for 465, false for 587
+  requireTLS: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+  },
+  tls: {
+    ciphers: "SSLv3",
+  },
+  // Force IPv4 at the socket level
+  lookup: (hostname, options, callback) => {
+    require("dns").lookup(hostname, { family: 4 }, (err, address, family) => {
+      callback(err, address, family);
+    });
   },
 });
 
