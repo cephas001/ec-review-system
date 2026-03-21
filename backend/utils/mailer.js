@@ -1,23 +1,7 @@
 // backend/utils/mailer.js
-const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const path = require("path");
 const Jimp = require("jimp");
-
-// Add this to the very top of your file
-const dns = require("node:dns");
-dns.setDefaultResultOrder("ipv4first"); // Forces Node to ALWAYS use IPv4 globally
-
-// Keep the transporter extremely simple now that Node is handling the DNS
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465, // Let's go back to 465, it is faster and uses implicit secure TLS
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 const ticketImages = {
   "Love Tribe": "love_tribe.jpeg",
@@ -58,9 +42,6 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
     const boxHeight = textHeight + paddingY;
 
     // TRUE CENTERING MATH:
-    // 0.63 centers it perfectly within the red area (ignoring the yellow sidebar)
-    // 0.55 is the exact middle of the gap between the ribbon and the bottom swirl
-    // Change 0.55 to 0.59 to push the box downward away from the ribbon
     const centerX = image.bitmap.width * 0.63;
     const centerY = image.bitmap.height * 0.565;
 
@@ -82,6 +63,11 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
 
     const ticketBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
 
+    // Convert the buffer to a base64 string for the Brevo API
+    const base64Ticket = ticketBuffer.toString("base64");
+
+    // ==========================================
+    // 2. HTML Rendering & Brevo API Dispatch
     // ==========================================
 
     const htmlContent = await ejs.renderFile(templatePath, {
@@ -89,30 +75,47 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
       tableChoice: tableChoice || "General Seating",
     });
 
-    await transporter.sendMail({
-      from: `"Excellence Conference" <${process.env.EMAIL_USER}>`,
-      to: recipientEmail,
-      subject: "Your Official Ticket: Excellence Conference Workers Dinner",
-      html: htmlContent,
-      attachments: [
-        // Attachment 1: The "Inline" version that shows up inside the email body
-        {
-          filename: `${applicantName.replace(/\s+/g, "_")}_Ticket.png`,
-          content: ticketBuffer,
-          cid: "customizedTicket",
-          contentDisposition: "inline",
+    // Using native fetch to bypass Render's SMTP port blocks
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+      },
+      body: JSON.stringify({
+        sender: {
+          name: "Excellence Conference",
+          email: process.env.EMAIL_USER, // This must be verified in Brevo
         },
-        // Attachment 2: The "Standard" version that forces a Download button at the bottom
-        {
-          filename: `${applicantName.replace(/\s+/g, "_")}_Ticket_Download.png`,
-          content: ticketBuffer,
-          contentDisposition: "attachment",
-        },
-      ],
+        to: [{ email: recipientEmail }],
+        subject: "Your Official Ticket: Excellence Conference Workers Dinner",
+        htmlContent: htmlContent,
+        attachment: [
+          // Attachment 1: The "Inline" version.
+          // Brevo requires the "name" here to exactly match the "cid" used in your EJS template's <img> tag
+          {
+            name: "customizedTicket",
+            content: base64Ticket,
+          },
+          // Attachment 2: The standard downloadable file with a clean name
+          {
+            name: `${applicantName.replace(/\s+/g, "_")}_Ticket.png`,
+            content: base64Ticket,
+          },
+        ],
+      }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Brevo API Error Details:", errorData);
+      throw new Error(`Brevo rejected the request: ${errorData.message}`);
+    }
+
+    const result = await response.json();
     console.log(
-      `Customized ${tableChoice} ticket successfully sent to ${recipientEmail}`,
+      `Customized ${tableChoice} ticket successfully sent to ${recipientEmail} (Message ID: ${result.messageId})`,
     );
     return true;
   } catch (error) {
