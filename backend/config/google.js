@@ -2,9 +2,6 @@
 const { google } = require("googleapis");
 const path = require("path");
 
-// Path to your service account key file
-const KEYFILEPATH = path.join(__dirname, "../google-credentials.json");
-
 // Define the scopes (permissions) the bot needs
 const SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
@@ -13,7 +10,11 @@ const SCOPES = [
 
 // Initialize the Auth client
 const auth = new google.auth.GoogleAuth({
-  keyFile: KEYFILEPATH,
+  credentials: {
+    project_id: process.env.GOOGLE_PROJECT_ID,
+    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  },
   scopes: SCOPES,
 });
 
