@@ -6,9 +6,11 @@ const Jimp = require("jimp");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  port: 467,
+  port: 587,
   family: 4,
-  secure: true,
+  secure: false,
+  requireTLS: true,
+  host: "smtp.gmail.com",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
