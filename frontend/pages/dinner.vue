@@ -146,7 +146,118 @@
               >
                 {{ header }}
               </h4>
+
+              <div
+                v-if="header.toLowerCase().includes('name')"
+                class="relative"
+              >
+                <div
+                  class="flex items-center justify-between p-2 -ml-2 rounded-lg transition-colors"
+                  :class="
+                    getWorkerMatch(currentApp[header]).status !== 'unverified'
+                      ? 'hover:bg-gray-100 cursor-pointer'
+                      : ''
+                  "
+                  @click="
+                    getWorkerMatch(currentApp[header]).status !==
+                      'unverified' && toggleNameDropdown(currentApp._rowIndex)
+                  "
+                >
+                  <p
+                    class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
+                  >
+                    {{ currentApp[header] || "—" }}
+                  </p>
+
+                  <div class="ml-2 flex-shrink-0">
+                    <span
+                      v-if="
+                        getWorkerMatch(currentApp[header]).status ===
+                        'unverified'
+                      "
+                      class="flex items-center text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md font-semibold"
+                      title="Not found in workers database"
+                    >
+                      <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                      Unverified
+                    </span>
+
+                    <span
+                      v-else
+                      class="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-semibold"
+                    >
+                      <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      {{
+                        getWorkerMatch(currentApp[header]).status === "exact"
+                          ? "Verified"
+                          : "Check Match"
+                      }}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  v-if="
+                    openNameDropdowns[currentApp._rowIndex] &&
+                    getWorkerMatch(currentApp[header]).status !== 'unverified'
+                  "
+                  class="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm animate-fade-in-up"
+                >
+                  <p class="text-xs font-bold text-blue-800 uppercase mb-2">
+                    Closest Database Matches:
+                  </p>
+                  <ul class="space-y-2">
+                    <li
+                      v-for="(match, idx) in getWorkerMatch(currentApp[header])
+                        .matches"
+                      :key="idx"
+                      class="flex items-start text-blue-900 font-medium"
+                    >
+                      <svg
+                        class="w-3 h-3 mr-2 mt-1 text-blue-400 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 8 8"
+                      >
+                        <circle cx="4" cy="4" r="3" />
+                      </svg>
+                      <div>
+                        <span class="block">{{ match.name }}</span>
+                        <span
+                          class="block text-xs text-blue-600 opacity-80 mt-0.5"
+                        >
+                          Unit: {{ match.unit }}
+                        </span>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
               <p
+                v-else
                 class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
               >
                 {{ currentApp[header] || "—" }}
@@ -400,11 +511,16 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRuntimeConfig, useCookie } from "#app";
+import Fuse from "fuse.js";
 
 const config = useRuntimeConfig();
 const token = useCookie("ec_token");
 
 const applications = ref([]);
+// New state for Workers
+const officialWorkers = ref([]);
+const fuseEngine = ref(null);
+const openNameDropdowns = ref({});
 const loading = ref(true);
 const updatingRow = ref(null);
 const currentTab = ref("review");
@@ -416,6 +532,57 @@ const reviewComment = ref("");
 const showInfoPanel = ref(false);
 const isModalOpen = ref(false);
 const selectedRow = ref(null);
+
+// Fetch the workers database
+const fetchWorkers = async () => {
+  try {
+    const response = await $fetch(
+      `${config.public.apiBase}/applications/workers`,
+      {
+        headers: { Authorization: `Bearer ${token.value}` },
+      },
+    );
+    officialWorkers.value = response.data;
+
+    // Initialize Fuse.js with the master list of objects
+    fuseEngine.value = new Fuse(officialWorkers.value, {
+      keys: ["name"], // Tell Fuse to only perform fuzzy searches on the "name" property
+      includeScore: true,
+      threshold: 0.4,
+    });
+  } catch (err) {
+    console.error("Failed to load workers database");
+  }
+};
+
+// Helper to check an applicant's name
+const getWorkerMatch = (applicantName) => {
+  if (!fuseEngine.value || !applicantName)
+    return { status: "unverified", matches: [] };
+
+  const results = fuseEngine.value.search(applicantName);
+
+  if (results.length === 0) {
+    return { status: "unverified", matches: [] };
+  }
+
+  // If the top score is very close to 0, it's basically an exact match
+  if (results[0].score < 0.1) {
+    return { status: "exact", matches: [results[0].item] };
+  }
+
+  // Otherwise, it's a fuzzy match (typo or reversed names)
+  // Return the top 3 closest matches
+  return {
+    status: "fuzzy",
+    matches: results.slice(0, 3).map((r) => r.item),
+  };
+};
+
+// Toggle dropdown state
+const toggleNameDropdown = (rowIndex) => {
+  openNameDropdowns.value[rowIndex] = !openNameDropdowns.value[rowIndex];
+};
 
 // --- Navigation Logic ---
 const nextApp = () => {
@@ -607,6 +774,7 @@ const updateStatus = async (rowIndex, newStatus) => {
 
 onMounted(() => {
   fetchApplications();
+  fetchWorkers();
 });
 </script>
 

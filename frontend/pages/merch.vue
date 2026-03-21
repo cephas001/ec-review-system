@@ -271,7 +271,7 @@
         <div
           class="flex-1 p-6 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100"
         >
-          <h3 class="text-lg font-bold text-gray-900 mb-6">Review Details</h3>
+          <h3 class="text-lg font-bold text-black mb-6">Details</h3>
 
           <div class="space-y-4">
             <div v-for="header in dataHeaders" :key="header">

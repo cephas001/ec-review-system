@@ -19,6 +19,49 @@ const formatSheetData = (rows) => {
   });
 };
 
+// backend/routes/applications.js (or wherever your routes are)
+// 1. SPECIFIC ROUTE GOES FIRST
+router.get("/workers", async (req, res) => {
+  try {
+    // Fetch both the Workers and Executives sheets simultaneously
+    const [workersResponse, execsResponse] = await Promise.all([
+      sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.SHEET_ID_WORKERS,
+        // Changed back to the default Google Forms tab name
+        range: "'Form Responses 1'!B2:C",
+      }),
+      sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.SHEET_ID_EXECUTIVES,
+        // Changed back to the default Google Forms tab name
+        range: "'Form Responses 1'!B2:C",
+      }),
+    ]);
+
+    // Helper function to map the raw rows into clean objects
+    const formatData = (rows) => {
+      if (!rows) return [];
+      return rows
+        .map((row) => ({
+          name: row[0] ? row[0].trim() : "",
+          // If they didn't fill in a unit, provide a fallback
+          unit: row[1] ? row[1].trim() : "Unassigned",
+        }))
+        .filter((person) => person.name !== ""); // Remove empty rows
+    };
+
+    const workers = formatData(workersResponse.data.values);
+    const executives = formatData(execsResponse.data.values);
+
+    // Merge both arrays into one master list
+    const combinedDatabase = [...workers, ...executives]; // Note: Fixed small typo here (execs -> executives)
+
+    res.status(200).json({ data: combinedDatabase });
+  } catch (error) {
+    console.error("Failed to fetch workers and executives:", error);
+    res.status(500).json({ error: "Could not fetch the personnel databases." });
+  }
+});
+
 // --- GET ALL APPLICATIONS ---
 // We use a dynamic parameter /:type to handle both 'dinner' and 'merch'
 router.get("/:type", async (req, res) => {
