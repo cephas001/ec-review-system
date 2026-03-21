@@ -95,7 +95,7 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
           // Attachment 1: The "Inline" version.
           // Brevo requires the "name" here to exactly match the "cid" used in your EJS template's <img> tag
           {
-            name: "customizedTicket",
+            name: "customizedTicket.png",
             content: base64Ticket,
           },
           // Attachment 2: The standard downloadable file with a clean name
