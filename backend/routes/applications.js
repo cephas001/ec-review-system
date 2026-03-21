@@ -59,22 +59,21 @@ router.get("/:type", async (req, res) => {
 });
 
 // Helper function to convert a column index (0, 1, 2) to a letter (A, B, C)
-const getColumnLetter = (index) => {
-  let temp,
-    letter = "";
-  while (index >= 0) {
-    temp = index % 26;
-    letter = String.fromCharCode(temp + 65) + letter;
-    index = (index - temp - 26) / 26;
+const getColumnLetter = (colIndex) => {
+  let letter = "";
+  let temp = colIndex;
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
   }
   return letter;
 };
 
-// --- UPDATE APPLICATION STATUS ---
 router.patch("/:type/status", async (req, res) => {
   try {
     const { type } = req.params;
-    const { rowIndex, status } = req.body; // We need the row number and the new status
+    // Extract comment alongside rowIndex and status
+    const { rowIndex, status, comment } = req.body;
 
     // 1. Validate inputs
     if (!rowIndex || !status) {
@@ -95,48 +94,88 @@ router.patch("/:type/status", async (req, res) => {
       type === "dinner"
         ? process.env.SHEET_ID_DINNER
         : process.env.SHEET_ID_MERCH;
+
     if (!spreadsheetId) {
       return res.status(400).json({ error: "Invalid application type." });
     }
 
-    // 3. Find which column contains "Status"
+    // 3. Fetch the header row to dynamically find our target columns
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Form Responses 1!1:1", // Only fetch the first row
+      range: "Form Responses 1!1:1",
     });
 
-    const headers = headerResponse.data.values[0];
-    const statusColIndex = headers.findIndex(
+    const headers = headerResponse.data.values
+      ? headerResponse.data.values[0]
+      : [];
+
+    // Find existing columns
+    let statusColIndex = headers.findIndex(
       (h) => h.trim().toLowerCase() === "status",
     );
+    let commentColIndex = headers.findIndex(
+      (h) =>
+        h.trim().toLowerCase() === "comments" ||
+        h.trim().toLowerCase() === "comment",
+    );
 
+    let headersUpdated = false;
+
+    // Auto-heal: If columns don't exist, append them to the headers
     if (statusColIndex === -1) {
-      return res.status(500).json({
-        error: 'A "Status" column was not found in the Google Sheet headers.',
+      statusColIndex = headers.length;
+      headers.push("Status");
+      headersUpdated = true;
+    }
+
+    if (commentColIndex === -1) {
+      commentColIndex = headers.length;
+      headers.push("Comments");
+      headersUpdated = true;
+    }
+
+    // 4. Prepare the Batch Update Payload
+    const dataToUpdate = [];
+
+    // Queue the Status update
+    dataToUpdate.push({
+      range: `Form Responses 1!${getColumnLetter(statusColIndex)}${rowIndex}`,
+      values: [[status]],
+    });
+
+    // Queue the Comment update (only if a comment was actually sent)
+    if (comment !== undefined && comment !== null) {
+      dataToUpdate.push({
+        range: `Form Responses 1!${getColumnLetter(commentColIndex)}${rowIndex}`,
+        values: [[comment]],
       });
     }
 
-    const statusColLetter = getColumnLetter(statusColIndex);
-    const cellRange = `Form Responses 1!${statusColLetter}${rowIndex}`;
+    // Queue the Header update (only if we had to create new columns)
+    if (headersUpdated) {
+      dataToUpdate.push({
+        range: "Form Responses 1!1:1",
+        values: [[...headers]],
+      });
+    }
 
-    // 4. Update the specific cell
-    await sheets.spreadsheets.values.update({
+    // 5. Execute all updates simultaneously using batchUpdate
+    await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
-      range: cellRange,
-      valueInputOption: "USER_ENTERED",
-      resource: {
-        values: [[status]], // Google Sheets expects an array of arrays for updates
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: dataToUpdate,
       },
     });
 
     res.status(200).json({
-      message: `Successfully updated row ${rowIndex} to ${status}`,
+      message: `Successfully updated row ${rowIndex} (Status: ${status})`,
     });
   } catch (error) {
     console.error("Google Sheets update error:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to update status in Google Sheets." });
+    res.status(500).json({
+      error: "Failed to update status and comments in Google Sheets.",
+    });
   }
 });
 
