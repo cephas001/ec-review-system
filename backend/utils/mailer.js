@@ -4,23 +4,18 @@ const ejs = require("ejs");
 const path = require("path");
 const Jimp = require("jimp");
 
+// Add this to the very top of your file
+const dns = require("node:dns");
+dns.setDefaultResultOrder("ipv4first"); // Forces Node to ALWAYS use IPv4 globally
+
+// Keep the transporter extremely simple now that Node is handling the DNS
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for 587
-  requireTLS: true,
+  port: 465, // Let's go back to 465, it is faster and uses implicit secure TLS
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    ciphers: "SSLv3",
-  },
-  // Force IPv4 at the socket level
-  lookup: (hostname, options, callback) => {
-    require("dns").lookup(hostname, { family: 4 }, (err, address, family) => {
-      callback(err, address, family);
-    });
   },
 });
 
