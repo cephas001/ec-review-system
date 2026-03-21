@@ -15,58 +15,15 @@
       </div>
     </div>
 
-    <div class="border-b border-gray-200 mb-6">
-      <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-        <button
-          @click="currentTab = 'review'"
-          :class="[
-            currentTab === 'review'
-              ? 'border-black text-black'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-            'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center',
-          ]"
-        >
-          Review Deck
-          <span
-            v-if="pendingApplications.length > 0"
-            class="ml-2 bg-black text-white py-0.5 px-2.5 rounded-full text-xs"
-          >
-            {{ pendingApplications.length }}
-          </span>
-        </button>
-        <button
-          @click="currentTab = 'approved'"
-          :class="[
-            currentTab === 'approved'
-              ? 'border-green-500 text-green-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-            'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center',
-          ]"
-        >
-          Approved
-          <span
-            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs"
-          >
-            {{ approvedApplications.length }}
-          </span>
-        </button>
-        <button
-          @click="currentTab = 'rejected'"
-          :class="[
-            currentTab === 'rejected'
-              ? 'border-red-500 text-red-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-            'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center',
-          ]"
-        >
-          Rejected
-          <span
-            class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs"
-          >
-            {{ rejectedApplications.length }}
-          </span>
-        </button>
-      </nav>
+    <div class="mb-6 w-full">
+      <DinnerReviewNav
+        :currentTab="currentTab"
+        :pendingApplications="pendingApplications"
+        :approvedApplications="approvedApplications"
+        :rejectedApplications="rejectedApplications"
+        :unsentApplications="unsentApplications"
+        @update:currentTab="currentTab = $event"
+      />
     </div>
 
     <div
@@ -122,9 +79,10 @@
               >
                 <IconsLeftCaret />
               </button>
-              <span class="text-xs font-semibold text-gray-600 tracking-wider">
-                {{ currentIndex + 1 }} OF {{ pendingApplications.length }}
-              </span>
+              <span class="text-xs font-semibold text-gray-600 tracking-wider"
+                >{{ currentIndex + 1 }} OF
+                {{ pendingApplications.length }}</span
+              >
               <button
                 @click="nextApp"
                 :disabled="currentIndex >= pendingApplications.length - 1"
@@ -166,9 +124,8 @@
                   <p
                     class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
                   >
-                    {{ currentApp[header] || "—" }}
+                    {{ formatName(currentApp[header]) || "—" }}
                   </p>
-
                   <div class="ml-2 flex-shrink-0">
                     <span
                       v-if="
@@ -193,7 +150,6 @@
                       </svg>
                       Unverified
                     </span>
-
                     <span
                       v-else
                       class="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-semibold"
@@ -219,6 +175,7 @@
                     </span>
                   </div>
                 </div>
+
                 <div
                   v-if="
                     openNameDropdowns[currentApp._rowIndex] &&
@@ -244,18 +201,16 @@
                         <circle cx="4" cy="4" r="3" />
                       </svg>
                       <div>
-                        <span class="block">{{ match.name }}</span>
+                        <span class="block">{{ formatName(match.name) }}</span>
                         <span
                           class="block text-xs text-blue-600 opacity-80 mt-0.5"
+                          >Unit: {{ match.unit }}</span
                         >
-                          Unit: {{ match.unit }}
-                        </span>
                       </div>
                     </li>
                   </ul>
                 </div>
               </div>
-
               <p
                 v-else
                 class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
@@ -267,9 +222,8 @@
             <div class="mt-4 pt-4 border-t border-gray-100">
               <label
                 class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2"
+                >Reviewer Comments (Optional)</label
               >
-                Reviewer Comments (Optional)
-              </label>
               <textarea
                 v-model="reviewComment"
                 rows="3"
@@ -283,7 +237,7 @@
             <button
               @click="updateStatus(currentApp._rowIndex, 'Rejected')"
               :disabled="updatingRow === currentApp._rowIndex"
-              class="flex-1 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 py-3 px-4 rounded-xl transition-all disabled:opacity-50"
+              class="flex-1 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 py-3 px-4 rounded-xl transition-all disabled:opacity-50"
             >
               Reject
             </button>
@@ -305,7 +259,6 @@
           >
             Uploaded Receipt
           </h4>
-
           <div
             class="w-full h-full flex items-center justify-center bg-white border border-gray-200 rounded-xl overflow-hidden relative shadow-inner"
           >
@@ -315,7 +268,6 @@
               class="w-full h-full min-h-[550px] md:min-h-[700px] border-0"
               title="Receipt Viewer"
             ></iframe>
-
             <div v-else class="text-center p-8">
               <svg
                 class="mx-auto h-12 w-12 text-gray-300 mb-3"
@@ -335,16 +287,13 @@
               </p>
             </div>
           </div>
-
           <a
             v-if="currentReceiptUrl"
             :href="currentReceiptUrl"
             target="_blank"
             class="mt-4 text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center"
-          >
-            Open receipt in full screen
-            <IconsNewTab />
-          </a>
+            >Open receipt in full screen<IconsNewTab
+          /></a>
         </div>
       </div>
 
@@ -355,17 +304,14 @@
         <button
           @click="updateStatus(currentApp._rowIndex, 'Approved')"
           :disabled="updatingRow === currentApp._rowIndex"
-          class="bg-black text-white p-4 rounded-full hover:bg-black/90 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer"
-          title="Approve Application"
+          class="bg-black text-white p-4 rounded-full hover:bg-black/90 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer shadow-lg"
         >
           <IconsTick />
         </button>
-
         <button
           @click="updateStatus(currentApp._rowIndex, 'Rejected')"
           :disabled="updatingRow === currentApp._rowIndex"
-          class="bg-black text-red-600 p-4 rounded-full hover:bg-black/90 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer"
-          title="Reject Application"
+          class="bg-white border border-gray-200 text-red-600 p-4 rounded-full hover:bg-gray-50 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer shadow-lg"
         >
           <IconsCancel />
         </button>
@@ -387,12 +333,22 @@
               >
                 {{ header }}
               </th>
+              <th
+                v-if="currentTab === 'unsent'"
+                class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="activeSummaryList.length === 0">
               <td
-                :colspan="dataHeaders.length"
+                :colspan="
+                  currentTab === 'unsent'
+                    ? dataHeaders.length + 1
+                    : dataHeaders.length
+                "
                 class="px-6 py-12 text-center text-sm text-gray-500"
               >
                 No {{ currentTab }} applications found.
@@ -409,7 +365,62 @@
                 :key="header"
                 class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
               >
-                {{ row[header] }}
+                {{
+                  header.toLowerCase().includes("name")
+                    ? formatName(row[header])
+                    : row[header]
+                }}
+              </td>
+              <td
+                v-if="currentTab === 'unsent'"
+                class="px-6 py-4 text-right whitespace-nowrap"
+                @click.stop
+              >
+                <button
+                  @click="resendEmail(row)"
+                  :disabled="resendingRows.includes(row._rowIndex)"
+                  class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-bold rounded-full shadow-sm text-white bg-black hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                >
+                  <svg
+                    v-if="resendingRows.includes(row._rowIndex)"
+                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <svg
+                    v-else
+                    class="-ml-1 mr-2 h-4 w-4 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  {{
+                    resendingRows.includes(row._rowIndex)
+                      ? "Sending..."
+                      : "Resend"
+                  }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -425,7 +436,6 @@
         class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
         @click="isModalOpen = false"
       ></div>
-
       <div
         class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row"
       >
@@ -447,23 +457,24 @@
             />
           </svg>
         </button>
-
         <div
           class="flex-1 p-6 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100"
         >
           <h3 class="text-lg font-bold text-gray-900 mb-6">Review Details</h3>
-
           <div class="space-y-4">
             <div v-for="header in dataHeaders" :key="header">
               <span
                 class="block text-xs font-semibold text-gray-400 uppercase"
                 >{{ header }}</span
               >
-              <span class="block text-sm text-gray-900 font-medium">{{
-                selectedRow[header] || "—"
-              }}</span>
+              <span class="block text-sm text-gray-900 font-medium">
+                {{
+                  header.toLowerCase().includes("name")
+                    ? formatName(selectedRow[header])
+                    : selectedRow[header] || "—"
+                }}
+              </span>
             </div>
-
             <div
               v-if="getComment(selectedRow)"
               class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-100"
@@ -478,7 +489,6 @@
             </div>
           </div>
         </div>
-
         <div
           class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-[600px]"
         >
@@ -517,14 +527,13 @@ const config = useRuntimeConfig();
 const token = useCookie("ec_token");
 
 const applications = ref([]);
-// New state for Workers
-const officialWorkers = ref([]);
-const fuseEngine = ref(null);
-const openNameDropdowns = ref({});
 const loading = ref(true);
 const updatingRow = ref(null);
 const currentTab = ref("review");
 const imageLoadError = ref(false);
+
+// Unsent Mails Tracking
+const resendingRows = ref([]);
 
 // New Features State
 const currentIndex = ref(0);
@@ -533,7 +542,21 @@ const showInfoPanel = ref(false);
 const isModalOpen = ref(false);
 const selectedRow = ref(null);
 
-// Fetch the workers database
+const officialWorkers = ref([]);
+const fuseEngine = ref(null);
+const openNameDropdowns = ref({});
+
+// --- Formatting ---
+const formatName = (name) => {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .toLowerCase()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+// --- Fetch Workers Logic ---
 const fetchWorkers = async () => {
   try {
     const response = await $fetch(
@@ -543,10 +566,8 @@ const fetchWorkers = async () => {
       },
     );
     officialWorkers.value = response.data;
-
-    // Initialize Fuse.js with the master list of objects
     fuseEngine.value = new Fuse(officialWorkers.value, {
-      keys: ["name"], // Tell Fuse to only perform fuzzy searches on the "name" property
+      keys: ["name"],
       includeScore: true,
       threshold: 0.4,
     });
@@ -555,31 +576,16 @@ const fetchWorkers = async () => {
   }
 };
 
-// Helper to check an applicant's name
 const getWorkerMatch = (applicantName) => {
   if (!fuseEngine.value || !applicantName)
     return { status: "unverified", matches: [] };
-
   const results = fuseEngine.value.search(applicantName);
-
-  if (results.length === 0) {
-    return { status: "unverified", matches: [] };
-  }
-
-  // If the top score is very close to 0, it's basically an exact match
-  if (results[0].score < 0.1) {
+  if (results.length === 0) return { status: "unverified", matches: [] };
+  if (results[0].score < 0.1)
     return { status: "exact", matches: [results[0].item] };
-  }
-
-  // Otherwise, it's a fuzzy match (typo or reversed names)
-  // Return the top 3 closest matches
-  return {
-    status: "fuzzy",
-    matches: results.slice(0, 3).map((r) => r.item),
-  };
+  return { status: "fuzzy", matches: results.slice(0, 3).map((r) => r.item) };
 };
 
-// Toggle dropdown state
 const toggleNameDropdown = (rowIndex) => {
   openNameDropdowns.value[rowIndex] = !openNameDropdowns.value[rowIndex];
 };
@@ -591,7 +597,6 @@ const nextApp = () => {
     reviewComment.value = "";
   }
 };
-
 const prevApp = () => {
   if (currentIndex.value > 0) {
     currentIndex.value--;
@@ -612,6 +617,13 @@ const getComment = (row) => {
     k.toLowerCase().includes("comment"),
   );
   return commentKey ? row[commentKey] : null;
+};
+
+const getEmailStatus = (row) => {
+  const emailStatusKey = Object.keys(row).find(
+    (k) => k.toLowerCase() === "email status",
+  );
+  return emailStatusKey ? (row[emailStatusKey] || "").trim().toLowerCase() : "";
 };
 
 const getReceiptKey = () => {
@@ -644,25 +656,32 @@ const pendingApplications = computed(() =>
 
 const currentApp = computed(() => {
   if (pendingApplications.value.length === 0) return null;
-  if (currentIndex.value >= pendingApplications.value.length) {
+  if (currentIndex.value >= pendingApplications.value.length)
     currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
-  }
   return pendingApplications.value[currentIndex.value];
 });
 
 const approvedApplications = computed(() =>
   applications.value.filter((app) => getStatus(app) === "approved"),
 );
-
 const rejectedApplications = computed(() =>
   applications.value.filter((app) => getStatus(app) === "rejected"),
 );
 
-const activeSummaryList = computed(() =>
-  currentTab.value === "approved"
-    ? approvedApplications.value
-    : rejectedApplications.value,
+// Catch Failed OR Empty email statuses
+const unsentApplications = computed(() =>
+  approvedApplications.value.filter((app) => {
+    const eStatus = getEmailStatus(app);
+    return eStatus === "failed" || eStatus === "";
+  }),
 );
+
+const activeSummaryList = computed(() => {
+  if (currentTab.value === "approved") return approvedApplications.value;
+  if (currentTab.value === "rejected") return rejectedApplications.value;
+  if (currentTab.value === "unsent") return unsentApplications.value;
+  return [];
+});
 
 const dataHeaders = computed(() => {
   if (applications.value.length === 0) return [];
@@ -673,6 +692,7 @@ const dataHeaders = computed(() => {
       key.toLowerCase() !== "status" &&
       key.toLowerCase() !== "comment" &&
       key.toLowerCase() !== "comments" &&
+      key.toLowerCase() !== "email status" &&
       key !== receiptKey,
   );
 });
@@ -682,10 +702,8 @@ const currentReceiptUrl = computed(() => {
   if (!currentApp.value || imageLoadError.value) return null;
   const receiptKey = getReceiptKey();
   if (!receiptKey || !currentApp.value[receiptKey]) return null;
-
   const fileId = extractFileId(currentApp.value[receiptKey]);
   if (!fileId) return null;
-
   return `${config.public.apiBase}/applications/receipt/${fileId}`;
 });
 
@@ -693,10 +711,8 @@ const selectedReceiptUrl = computed(() => {
   if (!selectedRow.value) return null;
   const receiptKey = getReceiptKey();
   if (!receiptKey || !selectedRow.value[receiptKey]) return null;
-
   const fileId = extractFileId(selectedRow.value[receiptKey]);
   if (!fileId) return null;
-
   return `${config.public.apiBase}/applications/receipt/${fileId}`;
 });
 
@@ -729,8 +745,26 @@ const updateStatus = async (rowIndex, newStatus) => {
   updatingRow.value = rowIndex;
   imageLoadError.value = false;
 
+  const rowIndexInArray = applications.value.findIndex(
+    (app) => app._rowIndex === rowIndex,
+  );
+  if (rowIndexInArray === -1) {
+    updatingRow.value = null;
+    return;
+  }
+
+  // Find dynamic keys
+  const emailKey = Object.keys(applications.value[rowIndexInArray]).find((k) =>
+    k.toLowerCase().includes("email"),
+  );
+  const nameKey = Object.keys(applications.value[rowIndexInArray]).find((k) =>
+    k.toLowerCase().includes("name"),
+  );
+  const tableKey = Object.keys(applications.value[rowIndexInArray]).find((k) =>
+    k.toLowerCase().includes("table"),
+  );
+
   try {
-    // Note: Dinner URL endpoint is correct here
     await $fetch(`${config.public.apiBase}/applications/dinner/status`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token.value}` },
@@ -738,29 +772,33 @@ const updateStatus = async (rowIndex, newStatus) => {
         rowIndex,
         status: newStatus,
         comment: reviewComment.value,
+        applicantEmail: emailKey
+          ? applications.value[rowIndexInArray][emailKey]
+          : null,
+        applicantName: nameKey
+          ? formatName(applications.value[rowIndexInArray][nameKey])
+          : null,
+        tableChoice: tableKey
+          ? applications.value[rowIndexInArray][tableKey]
+          : null,
       },
     });
 
-    const rowIndexInArray = applications.value.findIndex(
-      (app) => app._rowIndex === rowIndex,
-    );
-    if (rowIndexInArray !== -1) {
-      let statusKey = Object.keys(applications.value[rowIndexInArray]).find(
+    let statusKey =
+      Object.keys(applications.value[rowIndexInArray]).find(
         (k) => k.toLowerCase() === "status",
-      );
-      if (!statusKey) statusKey = "Status";
-
-      let commentKey = Object.keys(applications.value[rowIndexInArray]).find(
+      ) || "Status";
+    let commentKey =
+      Object.keys(applications.value[rowIndexInArray]).find(
         (k) => k.toLowerCase() === "comment" || k.toLowerCase() === "comments",
-      );
-      if (!commentKey) commentKey = "Comments";
+      ) || "Comments";
 
-      applications.value[rowIndexInArray][statusKey] = newStatus;
-      applications.value[rowIndexInArray][commentKey] = reviewComment.value;
-    }
+    applications.value[rowIndexInArray][statusKey] = newStatus;
+    applications.value[rowIndexInArray][commentKey] = reviewComment.value;
+
+    // We optimistically assume email is processing. Backend will handle 'Sent' or 'Failed' silently.
 
     reviewComment.value = "";
-
     if (currentIndex.value >= pendingApplications.value.length) {
       currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
     }
@@ -772,24 +810,76 @@ const updateStatus = async (rowIndex, newStatus) => {
   }
 };
 
+// NEW: Manual Email Resend Function
+const resendEmail = async (row) => {
+  resendingRows.value.push(row._rowIndex); // Trigger loading spinner
+
+  const emailKey = Object.keys(row).find((k) =>
+    k.toLowerCase().includes("email"),
+  );
+  const nameKey = Object.keys(row).find((k) =>
+    k.toLowerCase().includes("name"),
+  );
+  const tableKey = Object.keys(row).find((k) =>
+    k.toLowerCase().includes("table"),
+  );
+
+  try {
+    const response = await $fetch(
+      `${config.public.apiBase}/applications/dinner/resend`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token.value}` },
+        body: {
+          rowIndex: row._rowIndex,
+          applicantEmail: row[emailKey],
+          applicantName: formatName(row[nameKey]),
+          tableChoice: row[tableKey],
+        },
+      },
+    );
+
+    // Success! Update UI
+    let emailStatusKey =
+      Object.keys(row).find((k) => k.toLowerCase() === "email status") ||
+      "Email Status";
+    row[emailStatusKey] = "Sent";
+
+    // If we're on the Unsent tab, this row will dynamically vanish from the active list!
+    alert("Success! Ticket has been emailed.");
+  } catch (err) {
+    let emailStatusKey =
+      Object.keys(row).find((k) => k.toLowerCase() === "email status") ||
+      "Email Status";
+    row[emailStatusKey] = "Failed";
+    alert(
+      err.data?.error ||
+        "Failed to send email. Please check the email address.",
+    );
+    console.error(err);
+  } finally {
+    // Remove from loading array
+    resendingRows.value = resendingRows.value.filter(
+      (id) => id !== row._rowIndex,
+    );
+  }
+};
+
 onMounted(() => {
   fetchApplications();
   fetchWorkers();
 });
 </script>
 
-<style>
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+<style scoped>
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-.animate-fade-in-up {
-  animation: fadeInUp 0.2s ease-out forwards;
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 </style>
