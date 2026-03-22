@@ -19,9 +19,22 @@
         />
       </svg>
     </div>
-    <h3 class="text-lg font-medium text-gray-900">Merch queue is empty!</h3>
+    <h3 class="text-lg font-medium text-gray-900">{{ title }}</h3>
     <p class="mt-1 text-sm text-gray-500">
-      All merchandise receipts have been processed.
+      {{ subtitle }}
     </p>
   </div>
 </template>
+
+<script setup>
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+  subtitle: {
+    type: String,
+    required: true,
+  },
+});
+</script>

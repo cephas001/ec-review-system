@@ -1,22 +1,13 @@
 <template>
   <div class="max-w-6xl mx-auto pb-24 md:pb-0 relative">
-    <div class="sm:flex sm:items-center sm:justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-black">Merchandise Review</h1>
-      </div>
-      <div class="mt-4 sm:mt-0 flex items-center space-x-3">
-        <button
-          @click="fetchApplications"
-          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-50 transition-colors"
-        >
-          <IconsRefresh :loading="loading" />
-          Refresh
-        </button>
-      </div>
-    </div>
+    <ReviewHeader
+      :loading="loading"
+      @refresh="fetchApplications"
+      titleText="Merchandise Review"
+    />
 
     <div class="border-b border-gray-200 mb-6">
-      <MerchReviewNav
+      <ReviewNav
         :currentTab="currentTab"
         :pendingApplications="pendingApplications"
         :approvedApplications="approvedApplications"
@@ -25,15 +16,14 @@
       />
     </div>
 
-    <div
-      v-if="loading && applications.length === 0"
-      class="flex justify-center items-center h-64 border-2 border-dashed border-gray-200 rounded-xl"
-    >
-      <IconsLoader />
-    </div>
+    <ReviewLoader v-if="loading && applications.length === 0" />
 
     <div v-else-if="currentTab === 'review'">
-      <MerchNoReviewMerch v-if="pendingApplications.length === 0" />
+      <EmptyReviewState
+        v-if="pendingApplications.length === 0"
+        title="Merch queue is empty!"
+        subtitle="All merchandise receipts have been processed."
+      />
 
       <div
         v-else-if="currentApp"
@@ -42,29 +32,12 @@
         <div
           class="flex-1 p-6 pb-4 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col h-full"
         >
-          <div
-            class="mb-6 flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100"
-          >
-            <div class="flex items-center space-x-2">
-              <button
-                @click="prevApp"
-                :disabled="currentIndex === 0"
-                class="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <IconsLeftCaret />
-              </button>
-              <span class="text-xs font-semibold text-gray-600 tracking-wider">
-                {{ currentIndex + 1 }} OF {{ pendingApplications.length }}
-              </span>
-              <button
-                @click="nextApp"
-                :disabled="currentIndex >= pendingApplications.length - 1"
-                class="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <IconsRightCaret />
-              </button>
-            </div>
-          </div>
+          <ReviewIndicator
+            :currentIndex="currentIndex"
+            :applications="pendingApplications"
+            @previous="prevApp"
+            @next="nextApp"
+          />
 
           <div class="space-y-5 flex-1 overflow-y-auto mb-6 pr-2">
             <div
@@ -98,27 +71,10 @@
               ></textarea>
             </div>
           </div>
-
-          <div class="hidden md:flex mt-auto space-x-4">
-            <button
-              @click="updateStatus(currentApp._rowIndex, 'Rejected')"
-              :disabled="updatingRow === currentApp._rowIndex"
-              class="flex-1 bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 py-3 px-4 rounded-xl transition-all disabled:opacity-50"
-            >
-              Reject
-            </button>
-            <button
-              @click="updateStatus(currentApp._rowIndex, 'Approved')"
-              :disabled="updatingRow === currentApp._rowIndex"
-              class="flex-2 bg-black text-white hover:bg-gray-800 py-3 px-4 rounded-xl transition-all disabled:opacity-50"
-            >
-              Approve Receipt
-            </button>
-          </div>
         </div>
 
         <div
-          class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-137.5 md:min-h-175"
+          class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[550px] md:min-h-[700px] relative"
         >
           <h4
             class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 w-full text-left"
@@ -127,32 +83,95 @@
           </h4>
 
           <div
-            class="w-full h-full flex items-center justify-center bg-white border border-gray-200 rounded-xl overflow-hidden relative shadow-inner"
+            class="w-full h-full bg-white border border-gray-200 rounded-xl overflow-hidden relative shadow-inner flex flex-col"
           >
-            <iframe
-              v-if="currentReceiptUrl"
-              :src="currentReceiptUrl"
-              class="w-full h-full min-h-137.5 md:min-h-175 border-0"
-              title="Receipt Viewer"
-            ></iframe>
+            <div
+              class="flex-1 w-full h-full overflow-auto bg-gray-50/50 flex items-center justify-center relative"
+            >
+              <img
+                v-if="currentReceiptUrl && !isPdfFallback"
+                :src="currentReceiptUrl"
+                @error="isPdfFallback = true"
+                class="max-w-none transition-all duration-300 ease-out object-contain"
+                :style="{
+                  width: zoomLevel === 1 ? '100%' : `${100 * zoomLevel}%`,
+                  height: zoomLevel === 1 ? '100%' : 'auto',
+                }"
+                alt="Receipt Viewer"
+              />
 
-            <div v-else class="text-center p-8">
-              <svg
-                class="mx-auto h-12 w-12 text-gray-300 mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <iframe
+                v-else-if="currentReceiptUrl && isPdfFallback"
+                :src="currentReceiptUrl"
+                class="w-full h-full border-0"
+                title="Receipt Viewer"
+              ></iframe>
+
+              <div
+                v-if="!currentReceiptUrl"
+                class="absolute inset-0 flex flex-col items-center justify-center p-8"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <p class="text-sm text-gray-500 font-medium">
-                No valid receipt found.
-              </p>
+                <svg
+                  class="mx-auto h-12 w-12 text-gray-300 mb-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <p class="text-sm text-gray-500 font-medium">
+                  No valid receipt found.
+                </p>
+              </div>
+            </div>
+
+            <div
+              v-if="currentReceiptUrl"
+              class="absolute bottom-4 right-4 flex flex-col bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden z-10"
+            >
+              <button
+                @click.prevent="zoomIn"
+                class="p-2.5 hover:bg-gray-50 border-b border-gray-200 text-gray-600 hover:text-black transition-colors outline-none cursor-pointer"
+                title="Zoom In"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+              </button>
+              <button
+                @click.prevent="zoomOut"
+                class="p-2.5 hover:bg-gray-50 text-gray-600 hover:text-black transition-colors outline-none cursor-pointer"
+                title="Zoom Out"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 12H4"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -162,33 +181,9 @@
             target="_blank"
             class="mt-4 text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center"
           >
-            Open receipt in full screen
-            <IconsNewTab />
+            Open receipt in full screen <IconsNewTab />
           </a>
         </div>
-      </div>
-
-      <div
-        v-if="pendingApplications.length > 0"
-        class="md:hidden fixed bottom-6 left-6 z-30 flex flex-col space-y-2"
-      >
-        <button
-          @click="updateStatus(currentApp._rowIndex, 'Approved')"
-          :disabled="updatingRow === currentApp._rowIndex"
-          class="bg-black text-white p-4 rounded-full hover:bg-black/90 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer"
-          title="Approve Application"
-        >
-          <IconsTick />
-        </button>
-
-        <button
-          @click="updateStatus(currentApp._rowIndex, 'Rejected')"
-          :disabled="updatingRow === currentApp._rowIndex"
-          class="bg-black text-red-600 p-4 rounded-full hover:bg-black/90 disabled:opacity-50 transition-all flex items-center justify-center outline-none cursor-pointer"
-          title="Reject Application"
-        >
-          <IconsCancel />
-        </button>
       </div>
     </div>
 
@@ -300,7 +295,7 @@
         </div>
 
         <div
-          class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150"
+          class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150 relative"
         >
           <iframe
             v-if="selectedReceiptUrl"
@@ -315,14 +310,91 @@
       </div>
     </div>
 
-    <button
-      @click="showInfoPanel = !showInfoPanel"
-      class="fixed bottom-10 right-10 z-40 text-black rounded-full shadow-lg hover:-translate-y-1 transition-all flex items-center justify-center"
-      title="Merch Details"
-    >
-      <IconsInfo v-if="!showInfoPanel" />
-      <IconsCancel v-else />
-    </button>
+    <div class="fixed bottom-10 right-10 z-50 flex flex-col items-end">
+      <transition name="fab-menu">
+        <div v-if="showFabMenu" class="flex flex-col items-end space-y-4 mb-4">
+          <button
+            v-if="currentTab === 'review' && currentApp"
+            @click="
+              updateStatus(currentApp._rowIndex, 'Approved');
+              showFabMenu = false;
+            "
+            :disabled="updatingRow === currentApp._rowIndex"
+            class="flex items-center group disabled:opacity-50"
+          >
+            <span
+              class="mr-3 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+              >Approve</span
+            >
+            <div
+              class="bg-black text-white p-3.5 rounded-full shadow-lg hover:scale-110 transition-transform"
+            >
+              <IconsTick />
+            </div>
+          </button>
+
+          <button
+            v-if="currentTab === 'review' && currentApp"
+            @click="
+              updateStatus(currentApp._rowIndex, 'Rejected');
+              showFabMenu = false;
+            "
+            :disabled="updatingRow === currentApp._rowIndex"
+            class="flex items-center group disabled:opacity-50"
+          >
+            <span
+              class="mr-3 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+              >Reject</span
+            >
+            <div
+              class="bg-white border-2 border-red-100 text-red-600 p-3.5 rounded-full shadow-lg hover:scale-110 transition-transform"
+            >
+              <IconsCancel />
+            </div>
+          </button>
+
+          <button
+            @click="
+              showInfoPanel = !showInfoPanel;
+              showFabMenu = false;
+            "
+            class="flex items-center group"
+          >
+            <span
+              class="mr-3 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+              >Details</span
+            >
+            <div
+              class="bg-white border-2 border-gray-100 text-black p-3.5 rounded-full shadow-lg hover:scale-110 transition-transform"
+            >
+              <IconsInfo />
+            </div>
+          </button>
+        </div>
+      </transition>
+
+      <button
+        @click="showFabMenu = !showFabMenu"
+        class="bg-black text-white p-4 rounded-full shadow-2xl hover:bg-gray-800 transition-colors duration-300 outline-none flex items-center justify-center w-[56px] h-[56px]"
+      >
+        <div class="relative w-6 h-5">
+          <span
+            class="absolute left-0 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
+            :class="showFabMenu ? 'top-2 rotate-45' : 'top-0'"
+          ></span>
+
+          <span
+            class="absolute left-0 top-2 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
+            :class="showFabMenu ? 'opacity-0 translate-x-3' : 'opacity-100'"
+          ></span>
+
+          <span
+            class="absolute left-0 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
+            :class="showFabMenu ? 'top-2 -rotate-45' : 'top-4'"
+          ></span>
+        </div>
+      </button>
+    </div>
 
     <MerchInfoPanel v-if="showInfoPanel" />
   </div>
@@ -331,6 +403,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRuntimeConfig, useCookie } from "#app";
+import App from "~/app.vue";
 
 const config = useRuntimeConfig();
 const token = useCookie("ec_token");
@@ -348,11 +421,25 @@ const showInfoPanel = ref(false);
 const isModalOpen = ref(false);
 const selectedRow = ref(null);
 
+// FAB and Zoom State
+const showFabMenu = ref(false);
+const zoomLevel = ref(1);
+const isPdfFallback = ref(false);
+
+const zoomIn = () => {
+  if (zoomLevel.value < 3) zoomLevel.value += 0.25;
+};
+const zoomOut = () => {
+  if (zoomLevel.value > 0.5) zoomLevel.value -= 0.25;
+};
+
 // --- Navigation Logic ---
 const nextApp = () => {
   if (currentIndex.value < pendingApplications.value.length - 1) {
     currentIndex.value++;
-    reviewComment.value = ""; // Clear comment when navigating
+    reviewComment.value = "";
+    zoomLevel.value = 1;
+    isPdfFallback.value = false; // Reset fallback
   }
 };
 
@@ -360,6 +447,8 @@ const prevApp = () => {
   if (currentIndex.value > 0) {
     currentIndex.value--;
     reviewComment.value = "";
+    zoomLevel.value = 1;
+    isPdfFallback.value = false; // Reset fallback
   }
 };
 
@@ -408,7 +497,6 @@ const pendingApplications = computed(() =>
 
 const currentApp = computed(() => {
   if (pendingApplications.value.length === 0) return null;
-  // Fallback to max index if array shrinks below current index
   if (currentIndex.value >= pendingApplications.value.length) {
     currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
   }
@@ -441,7 +529,6 @@ const dataHeaders = computed(() => {
   );
 });
 
-// Generate the final API URL for the current pending application's image
 const currentReceiptUrl = computed(() => {
   if (!currentApp.value || imageLoadError.value) return null;
   const receiptKey = getReceiptKey();
@@ -450,7 +537,6 @@ const currentReceiptUrl = computed(() => {
   const fileId = extractFileId(currentApp.value[receiptKey]);
   if (!fileId) return null;
 
-  // Point to our Express backend proxy without the view parameter
   return `${config.public.apiBase}/applications/receipt/${fileId}`;
 });
 
@@ -462,7 +548,6 @@ const selectedReceiptUrl = computed(() => {
   const fileId = extractFileId(selectedRow.value[receiptKey]);
   if (!fileId) return null;
 
-  // Point to our Express backend proxy without the view parameter
   return `${config.public.apiBase}/applications/receipt/${fileId}`;
 });
 
@@ -474,7 +559,8 @@ const openDetailsModal = (row) => {
 
 const fetchApplications = async () => {
   loading.value = true;
-  currentIndex.value = 0; // Reset index on refresh
+  currentIndex.value = 0;
+  zoomLevel.value = 1; // Reset zoom
   try {
     const response = await $fetch(
       `${config.public.apiBase}/applications/merch`,
@@ -496,7 +582,6 @@ const updateStatus = async (rowIndex, newStatus) => {
   imageLoadError.value = false;
 
   try {
-    // Note: We are sending the comment field in the body now.
     await $fetch(`${config.public.apiBase}/applications/merch/status`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token.value}` },
@@ -511,13 +596,11 @@ const updateStatus = async (rowIndex, newStatus) => {
       (app) => app._rowIndex === rowIndex,
     );
     if (rowIndexInArray !== -1) {
-      // Find or create status key
       let statusKey = Object.keys(applications.value[rowIndexInArray]).find(
         (k) => k.toLowerCase() === "status",
       );
       if (!statusKey) statusKey = "Status";
 
-      // Find or create comment key
       let commentKey = Object.keys(applications.value[rowIndexInArray]).find(
         (k) => k.toLowerCase() === "comment" || k.toLowerCase() === "comments",
       );
@@ -527,10 +610,9 @@ const updateStatus = async (rowIndex, newStatus) => {
       applications.value[rowIndexInArray][commentKey] = reviewComment.value;
     }
 
-    // Clear comment box for the next application
     reviewComment.value = "";
+    zoomLevel.value = 1; // Reset zoom on approve/reject
 
-    // Automatically manage index so user is looking at the next logical card
     if (currentIndex.value >= pendingApplications.value.length) {
       currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
     }
@@ -548,7 +630,17 @@ onMounted(() => {
 </script>
 
 <style>
-/* Simple utility animation for the info panel pop-up */
+/* Animations for the FAB Menu */
+.fab-menu-enter-active,
+.fab-menu-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fab-menu-enter-from,
+.fab-menu-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
