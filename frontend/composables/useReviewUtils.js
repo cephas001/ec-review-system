@@ -59,6 +59,36 @@ export const useReviewUtils = () => {
     return header;
   };
 
+  // Add this near your other functions
+  const normalizeForWhatsApp = (phone) => {
+    if (!phone) return "";
+
+    // Convert to string and strip all non-numeric characters (spaces, dashes, plus signs)
+    let cleaned = String(phone).replace(/\D/g, "");
+
+    // If it starts with 0 and is 11 digits long (Standard Nigerian format: 0703...)
+    if (cleaned.startsWith("0") && cleaned.length === 11) {
+      return "234" + cleaned.substring(1);
+    }
+
+    // If it's a 10 digit number (often OPay/Moniepoint accounts, e.g., 703...)
+    if (cleaned.length === 10) {
+      return "234" + cleaned;
+    }
+
+    // If it already starts with 234 and is 13 digits, it's perfect
+    if (cleaned.startsWith("234") && cleaned.length === 13) {
+      return cleaned;
+    }
+
+    return cleaned; // Fallback to raw cleaned numbers for weird edge cases
+  };
+
+  const getWhatsAppLink = (phone) => {
+    const normalized = normalizeForWhatsApp(phone);
+    return normalized ? `https://wa.me/${normalized}` : "#";
+  };
+
   return {
     formatName,
     getStatus,
@@ -66,5 +96,7 @@ export const useReviewUtils = () => {
     getReceiptKey,
     extractFileId,
     formatHeader,
+    getWhatsAppLink,
+    normalizeForWhatsApp,
   };
 };

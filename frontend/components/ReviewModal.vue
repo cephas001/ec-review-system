@@ -40,13 +40,30 @@
             <span class="block text-xs font-semibold text-gray-400 uppercase">{{
               formatHeader(header)
             }}</span>
-            <span class="block text-sm text-gray-900 font-medium">
-              {{
-                header.toLowerCase().includes("name")
-                  ? formatName(row[header])
-                  : row[header] || "—"
-              }}
-            </span>
+            <div class="flex items-center">
+              <span class="block text-sm text-gray-900 font-medium">
+                {{
+                  header.toLowerCase().includes("name")
+                    ? formatName(row[header])
+                    : row[header] || "—"
+                }}
+              </span>
+
+              <a
+                v-if="
+                  (header.toLowerCase().includes('phone') ||
+                    header.toLowerCase().includes('whatsapp') ||
+                    header.toLowerCase().includes('number')) &&
+                  row[header]
+                "
+                :href="getWhatsAppLink(row[header])"
+                target="_blank"
+                class="ml-2 text-green-500 hover:text-green-600 transition-transform bg-green-50 p-1 rounded-full"
+                title="Chat on WhatsApp"
+              >
+                <IconsWhatsApp />
+              </a>
+            </div>
           </div>
 
           <div
@@ -64,7 +81,7 @@
       </div>
 
       <div
-        class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150 relative"
+        class="flex-1 bg-gray-50 border-t-gray-200 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150 relative"
       >
         <ReceiptViewer :receiptUrl="receiptUrl" />
       </div>
@@ -74,7 +91,8 @@
 
 <script setup>
 import { useReviewUtils } from "~/composables/useReviewUtils";
-const { formatName, getComment, formatHeader } = useReviewUtils();
+const { formatName, getComment, formatHeader, getWhatsAppLink } =
+  useReviewUtils();
 
 defineProps({
   isOpen: { type: Boolean, default: false },

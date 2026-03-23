@@ -63,19 +63,43 @@
                   >
                     {{ formatName(value) || "—" }}
                   </p>
-                  <div class="ml-2 shrink-0">
+                  <div class="ml-2 flex-shrink-0">
                     <span
                       v-if="getWorkerMatch(value).status === 'unverified'"
                       class="flex items-center text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md font-semibold"
                     >
-                      <IconsHazard />
+                      <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
                       Unverified
                     </span>
                     <span
                       v-else
-                      class="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-semibold gap-1"
+                      class="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md font-semibold"
                     >
-                      <IconsInfo width="4" height="4" />
+                      <svg
+                        class="w-4 h-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
                       {{
                         getWorkerMatch(value).status === "exact"
                           ? "Verified"
@@ -101,7 +125,13 @@
                       :key="idx"
                       class="flex items-start text-blue-900 font-medium"
                     >
-                      <IconsBlueCircle />
+                      <svg
+                        class="w-3 h-3 mr-2 mt-1 text-blue-400 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 8 8"
+                      >
+                        <circle cx="4" cy="4" r="3" />
+                      </svg>
                       <div>
                         <span class="block">{{ formatName(match.name) }}</span>
                         <span
@@ -113,6 +143,30 @@
                   </ul>
                 </div>
               </div>
+
+              <div
+                v-else-if="
+                  header.toLowerCase().includes('phone') ||
+                  header.toLowerCase().includes('whatsapp')
+                "
+                class="flex items-center"
+              >
+                <p
+                  class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
+                >
+                  {{ value || "—" }}
+                </p>
+                <a
+                  v-if="value"
+                  :href="getWhatsAppLink(value)"
+                  target="_blank"
+                  class="ml-2 text-green-500 hover:text-green-600 hover:scale-110 transition-transform bg-green-50 p-1.5 rounded-full"
+                  title="Chat on WhatsApp"
+                >
+                  <IconsWhatsApp />
+                </a>
+              </div>
+
               <p
                 v-else
                 class="text-sm text-black font-medium whitespace-pre-wrap tracking-wide"
@@ -214,7 +268,7 @@ import { useReviewQueue } from "~/composables/useReviewQueue";
 import { useWorkerSearch } from "~/composables/useWorkerSearch";
 import { useReviewUtils } from "~/composables/useReviewUtils";
 
-const { formatName } = useReviewUtils();
+const { formatName, getWhatsAppLink } = useReviewUtils();
 
 // Initialize the queue specifically for 'dinner'
 const {
