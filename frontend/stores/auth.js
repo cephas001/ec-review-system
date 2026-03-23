@@ -18,6 +18,8 @@ export const useAuthStore = defineStore("auth", {
       const tokenCookie = useCookie("ec_token", { maxAge: 60 * 60 * 8 });
       const userCookie = useCookie("ec_user", { maxAge: 60 * 60 * 8 });
 
+      console.log(userData);
+
       tokenCookie.value = token;
       userCookie.value = userData;
     },

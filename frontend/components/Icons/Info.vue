@@ -1,5 +1,10 @@
 <template>
-  <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg
+    :class="`w-${width ? width : 6} h-${height ? height : 6}`"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
     <path
       stroke-linecap="round"
       stroke-linejoin="round"
@@ -8,3 +13,10 @@
     />
   </svg>
 </template>
+
+<script setup>
+const props = defineProps({
+  width: { type: [String, Number] },
+  height: { type: [String, Number] },
+});
+</script>

@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl p-3">
     <h1 class="text-3xl font-bold text-gray-900 mb-2">
-      Welcome back, Reviewer
+      Welcome back, {{ name }}
     </h1>
     <p class="text-gray-700 mb-8">
       Select a category from the sidebar to begin reviewing applications.
@@ -47,4 +47,7 @@
 
 <script setup>
 // This page automatically uses the default layout we just created!
+const auth = useAuthStore();
+
+const name = computed(() => auth.user?.name.split(" ")[0] || "Reviewer");
 </script>

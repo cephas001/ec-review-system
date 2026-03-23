@@ -3,24 +3,76 @@
     class="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8"
   >
     <div
-      class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
+      class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100 relative"
     >
-      <div class="text-center mb-8">
+      <NuxtLink
+        to="/"
+        class="absolute top-5 left-1/2 -translate-x-1/2 text-gray-400 hover:text-black transition-colors cursor-pointer"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+      </NuxtLink>
+
+      <div class="text-center mb-8 mt-4">
         <h2 class="text-2xl font-bold text-black">Excellence Conference</h2>
-        <p class="text-md text-gray-700 mt-2">Review Portal</p>
+        <p class="text-md text-gray-700 mt-2">Register New Reviewer</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-6">
+      <form @submit.prevent="handleRegister" class="space-y-6">
         <div>
-          <label for="email" class="block text-sm font-medium text-black mb-1"
-            >Email
-          </label>
+          <label for="name" class="block text-sm font-medium text-black mb-1"
+            >Full Name</label
+          >
           <div class="relative">
             <div
               class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
             >
               <svg
-                class="h-5 w-5 text-black"
+                class="h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </div>
+            <input
+              id="name"
+              v-model="formData.name"
+              type="text"
+              required
+              class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 focus:border-black outline-none rounded-lg sm:text-sm transition-colors bg-white text-black"
+              placeholder="John Doe"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-black mb-1"
+            >Email</label
+          >
+          <div class="relative">
+            <div
+              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+            >
+              <svg
+                class="h-5 w-5 text-gray-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -55,7 +107,7 @@
               class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
             >
               <svg
-                class="h-5 w-5 text-black"
+                class="h-5 w-5 text-gray-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -84,8 +136,8 @@
           :disabled="loading"
           class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
-          <IconsSpinner v-if="loading" />
-          {{ loading ? "Signing in..." : "Sign In" }}
+          <IconsLoader v-if="loading" />
+          {{ loading ? "Creating account..." : "Register Reviewer" }}
         </button>
 
         <div v-if="errorMessage" class="rounded-md bg-red-50 p-3 mt-3">
@@ -104,9 +156,28 @@
               </svg>
             </div>
             <div class="ml-3">
-              <h3 class="text-sm text-red-800">
-                {{ errorMessage }}
-              </h3>
+              <h3 class="text-sm text-red-800">{{ errorMessage }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="successMessage" class="rounded-md bg-green-50 p-3 mt-3">
+          <div class="flex">
+            <div class="shrink-0">
+              <svg
+                class="h-5 w-5 text-green-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm text-green-800">{{ successMessage }}</h3>
             </div>
           </div>
         </div>
@@ -116,41 +187,46 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
-import { useAuthStore } from "~/stores/auth";
-import { useRuntimeConfig, navigateTo } from "#app";
+import { ref } from "vue";
+import { useRuntimeConfig } from "#app";
 
-definePageMeta({
-  layout: false,
-});
-
-const auth = useAuthStore();
 const config = useRuntimeConfig();
-const loading = ref(false);
-const errorMessage = ref("");
 
-const formData = reactive({
+const formData = ref({
+  name: "",
   email: "",
   password: "",
 });
 
-async function handleLogin() {
+const loading = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
+
+const handleRegister = async () => {
   loading.value = true;
   errorMessage.value = "";
+  successMessage.value = "";
 
   try {
-    const response = await $fetch(`${config.public.apiBase}/auth/login`, {
+    const response = await $fetch(`${config.public.apiBase}/auth/register`, {
       method: "POST",
-      body: formData,
+      body: formData.value,
     });
 
-    auth.setAuth(response.user, response.token);
-    navigateTo("/");
+    successMessage.value = "Reviewer successfully registered!";
+
+    // Clear the form
+    formData.value = { name: "", email: "", password: "" };
+
+    // Optional: Send them back to the dashboard after a short delay
+    setTimeout(() => {
+      navigateTo("/");
+    }, 2000);
   } catch (error) {
     errorMessage.value =
-      error.data?.error || "Invalid credentials. Please try again.";
+      error.data?.error || "An error occurred during registration.";
   } finally {
     loading.value = false;
   }
-}
+};
 </script>

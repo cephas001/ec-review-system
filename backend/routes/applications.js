@@ -267,7 +267,6 @@ router.get("/receipt/:fileId", async (req, res) => {
     });
 
     const actualMimeType = metadata.data.mimeType;
-    console.log("Real MIME type from metadata:", actualMimeType);
 
     // STEP 2: Fetch the actual file stream
     const response = await drive.files.get(
