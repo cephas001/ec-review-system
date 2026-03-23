@@ -11,7 +11,7 @@
               :key="header"
               class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
             >
-              {{ header }}
+              {{ formatHeader(header) }}
             </th>
 
             <slot name="header-action"></slot>
@@ -57,7 +57,7 @@
 
 <script setup>
 import { useReviewUtils } from "~/composables/useReviewUtils";
-const { formatName } = useReviewUtils();
+const { formatName, formatHeader } = useReviewUtils();
 
 defineProps({
   headers: { type: Array, required: true },

@@ -204,12 +204,12 @@
       @toggle-details="showInfoPanel = !showInfoPanel"
     />
 
-    <DinnerInfoPanel v-if="showInfoPanel" />
+    <DinnerInfoPanel v-if="showInfoPanel" @close="showInfoPanel = false" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useReviewQueue } from "~/composables/useReviewQueue";
 import { useWorkerSearch } from "~/composables/useWorkerSearch";
 import { useReviewUtils } from "~/composables/useReviewUtils";
@@ -243,7 +243,12 @@ const {
   fetchApplications,
   updateStatus,
   resendEmail,
-} = useReviewQueue("dinner");
+} = useReviewQueue("dinner", {
+  hiddenColumns: [
+    "WHAT IS THE MOST UNIQUE THING ABOUT YOU?",
+    'WHAT IS YOUR EXPECTATION FOR "THE CORONATION"?',
+  ],
+});
 
 // Initialize Worker Search
 const { openNameDropdowns, fetchWorkers, getWorkerMatch, toggleNameDropdown } =
@@ -251,6 +256,13 @@ const { openNameDropdowns, fetchWorkers, getWorkerMatch, toggleNameDropdown } =
 
 // Local UI state
 const showFabMenu = ref(false);
+
+// Watch for tab changes and trigger a fresh data pull for the 'unsent' tab
+watch(currentTab, (newTab) => {
+  if (newTab === "unsent") {
+    fetchApplications();
+  }
+});
 
 onMounted(() => {
   fetchApplications();

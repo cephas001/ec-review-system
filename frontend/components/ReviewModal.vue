@@ -38,7 +38,7 @@
         <div class="space-y-4">
           <div v-for="header in headers" :key="header">
             <span class="block text-xs font-semibold text-gray-400 uppercase">{{
-              header
+              formatHeader(header)
             }}</span>
             <span class="block text-sm text-gray-900 font-medium">
               {{
@@ -74,7 +74,7 @@
 
 <script setup>
 import { useReviewUtils } from "~/composables/useReviewUtils";
-const { formatName, getComment } = useReviewUtils();
+const { formatName, getComment, formatHeader } = useReviewUtils();
 
 defineProps({
   isOpen: { type: Boolean, default: false },

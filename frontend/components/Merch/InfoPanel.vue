@@ -1,10 +1,12 @@
 <template>
   <div
-    class="fixed bottom-24 right-6 z-40 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up"
+    ref="panelRef"
+    class="fixed bottom-26 right-6 z-40 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up"
   >
     <div class="bg-black text-white p-4">
       <h3 class="text-center text-sm">Merch Reference Info</h3>
     </div>
+
     <div class="p-5 overflow-y-auto max-h-[60vh]">
       <h4 class="text-xs font-bold text-black uppercase mb-4 pl-1">
         Packages & Pricing
@@ -68,25 +70,44 @@
         </li>
       </ul>
 
-      <h4 class="text-xs font-bold text-black uppercase mb-3 pl-1">
+      <h4 class="text-xs font-bold text-black uppercase mb-4 pl-1">
         Account Details
       </h4>
-      <div class="bg-gray-50 p-2 rounded-lg border border-gray-100 text-sm">
-        <p class="mb-1">
-          <span class="text-gray-600">Bank: </span>
-          <span class="font-bold text-black tracking-wide">MONIEPOINT</span>
-        </p>
-        <p class="mb-1">
-          <span class="text-gray-600">Account: </span>
+      <ul class="space-y-3 text-sm">
+        <li
+          class="flex justify-between items-center border border-gray-100 p-2 bg-gray-50 rounded-md"
+        >
+          <span class="text-black">Bank:</span>
+          <span class="font-bold text-black">MONIEPOINT</span>
+        </li>
+        <li
+          class="flex justify-between items-center border border-gray-100 p-2 bg-gray-50 rounded-md"
+        >
+          <span class="text-black">Number:</span>
           <span class="font-bold text-black tracking-wide">9160822562</span>
-        </p>
-        <p>
-          <span class="text-gray-600">Name: </span>
-          <span class="font-bold text-black text-nowrap"
-            >KADIRI IYINOLUWA ESTHER</span
-          >
-        </p>
-      </div>
+        </li>
+        <li
+          class="flex justify-between items-center border border-gray-100 p-2 bg-gray-50 rounded-md"
+        >
+          <span class="text-black">Name:</span>
+          <span class="font-bold text-black">KADIRI IYINOLUWA ESTHER</span>
+        </li>
+      </ul>
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+import { onClickOutside } from "@vueuse/core";
+
+const emit = defineEmits(["close"]);
+
+// 1. Grab the panel element from the template
+const panelRef = ref(null);
+
+// 2. Tell VueUse to fire the 'close' event if a click happens outside the panel
+onClickOutside(panelRef, () => {
+  emit("close");
+});
+</script>

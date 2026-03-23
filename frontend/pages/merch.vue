@@ -107,7 +107,7 @@
       @toggle-details="showInfoPanel = !showInfoPanel"
     />
 
-    <MerchInfoPanel v-if="showInfoPanel" />
+    <MerchInfoPanel v-if="showInfoPanel" @close="showInfoPanel = false" />
   </div>
 </template>
 
@@ -139,7 +139,9 @@ const {
   openDetailsModal,
   fetchApplications,
   updateStatus,
-} = useReviewQueue("merch");
+} = useReviewQueue("merch", {
+  hiddenColumns: ["COLOR OF T-SHIRT", "SIZE OF T-SHIRT"],
+});
 
 // Local UI state
 const showFabMenu = ref(false);

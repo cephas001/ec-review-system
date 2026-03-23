@@ -5,10 +5,22 @@
     <div
       class="flex-1 w-full h-full overflow-auto bg-gray-50/50 flex items-center justify-center relative"
     >
+      <div
+        v-if="receiptUrl && isLoading"
+        class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 backdrop-blur-sm z-20"
+      >
+        <IconsLoader />
+        <span
+          class="mt-3 text-xs font-semibold text-gray-400 uppercase tracking-widest animate-pulse"
+          >Loading Receipt...</span
+        >
+      </div>
+
       <img
         v-if="receiptUrl && !isPdfFallback"
         :src="receiptUrl"
-        @error="isPdfFallback = true"
+        @load="isLoading = false"
+        @error="handleImageError"
         class="max-w-none transition-all duration-300 ease-out object-contain"
         :style="{
           width: zoomLevel === 1 ? '100%' : `${100 * zoomLevel}%`,
@@ -20,13 +32,14 @@
       <iframe
         v-else-if="receiptUrl && isPdfFallback"
         :src="receiptUrl"
+        @load="isLoading = false"
         class="w-full h-full border-0"
         title="Receipt Viewer"
       ></iframe>
 
       <div
         v-if="!receiptUrl"
-        class="absolute inset-0 flex flex-col items-center justify-center p-8"
+        class="absolute inset-0 flex flex-col items-center justify-center p-8 z-10"
       >
         <svg
           class="mx-auto h-12 w-12 text-gray-300 mb-3"
@@ -47,7 +60,7 @@
 
     <div
       v-if="receiptUrl"
-      class="absolute bottom-4 right-4 flex flex-col bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden z-10"
+      class="absolute bottom-4 right-4 flex flex-col bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden z-30"
     >
       <button
         @click.prevent="zoomIn"
@@ -100,6 +113,7 @@ const props = defineProps({
 
 const zoomLevel = ref(1);
 const isPdfFallback = ref(false);
+const isLoading = ref(true); // NEW: Track loading state
 
 const zoomIn = () => {
   if (zoomLevel.value < 3) zoomLevel.value += 0.25;
@@ -108,12 +122,20 @@ const zoomOut = () => {
   if (zoomLevel.value > 0.5) zoomLevel.value -= 0.25;
 };
 
-// Crucial: Reset zoom and fallback if the URL (current app) changes!
+// Handle image failure to load PDF fallback
+const handleImageError = () => {
+  isPdfFallback.value = true;
+  // We don't set isLoading to false here, because the iframe will now start loading!
+};
+
+// Reset everything when the receipt URL changes (e.g. moving to the next application)
 watch(
   () => props.receiptUrl,
-  () => {
+  (newUrl) => {
     zoomLevel.value = 1;
     isPdfFallback.value = false;
+    isLoading.value = !!newUrl; // Set to true ONLY if there is actually a URL to load
   },
-);
+  { immediate: true },
+); // immediate ensures it runs on first component mount
 </script>

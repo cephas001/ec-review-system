@@ -2,11 +2,12 @@ import { ref, computed } from "vue";
 import { useRuntimeConfig, useCookie } from "#app";
 import { useReviewUtils } from "~/composables/useReviewUtils";
 
-export const useReviewQueue = (endpoint) => {
+export const useReviewQueue = (endpoint, options = {}) => {
   const config = useRuntimeConfig();
   const token = useCookie("ec_token");
   const { formatName, getStatus, getReceiptKey, extractFileId } =
     useReviewUtils();
+  const { hiddenColumns = [] } = options; // Destructure the hidden columns, default to empty
 
   // --- Shared State ---
   const applications = ref([]);
@@ -87,15 +88,22 @@ export const useReviewQueue = (endpoint) => {
   const dataHeaders = computed(() => {
     if (applications.value.length === 0) return [];
     const receiptKey = getReceiptKey(applications.value);
-    return Object.keys(applications.value[0]).filter(
-      (key) =>
-        key !== "_rowIndex" &&
-        key.toLowerCase() !== "status" &&
-        key.toLowerCase() !== "comment" &&
-        key.toLowerCase() !== "comments" &&
-        key.toLowerCase() !== "email status" &&
-        key !== receiptKey,
-    );
+
+    // Convert hidden columns to lowercase for safe matching
+    const lowerHidden = hiddenColumns.map((col) => col.toLowerCase().trim());
+
+    return Object.keys(applications.value[0]).filter((key) => {
+      const lowerKey = key.toLowerCase().trim();
+      return (
+        lowerKey !== "_rowindex" &&
+        lowerKey !== "status" &&
+        lowerKey !== "comment" &&
+        lowerKey !== "comments" &&
+        lowerKey !== "email status" &&
+        key !== receiptKey &&
+        !lowerHidden.includes(lowerKey) // <-- The magic line that hides columns!
+      );
+    });
   });
 
   // --- Computed URLs ---

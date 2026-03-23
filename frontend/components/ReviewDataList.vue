@@ -8,7 +8,7 @@
       <h4
         class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1"
       >
-        {{ header }}
+        {{ formatHeader(header) }}
       </h4>
 
       <slot name="field" :header="header" :value="data[header]">
@@ -25,6 +25,10 @@
 </template>
 
 <script setup>
+import { useReviewUtils } from "~/composables/useReviewUtils";
+
+const { formatHeader } = useReviewUtils();
+
 defineProps({
   headers: { type: Array, required: true },
   data: { type: Object, required: true },

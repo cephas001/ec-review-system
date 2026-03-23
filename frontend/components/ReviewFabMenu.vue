@@ -55,20 +55,17 @@
 
     <button
       @click="showFabMenu = !showFabMenu"
-      class="bg-black text-white p-4 rounded-full shadow-2xl hover:bg-gray-800 transition-colors duration-300 outline-none flex items-center justify-center w-14 h-14"
+      class="bg-black text-white p-4 rounded-full shadow-2xl hover:bg-gray-800 transition-colors duration-300 outline-none flex items-center justify-center w-14 h-14 group"
     >
-      <div class="relative w-6 h-5">
+      <div
+        class="relative w-5 h-5 flex items-center justify-center transition-transform duration-300 ease-in-out"
+        :class="showFabMenu ? 'rotate-135' : 'group-hover:scale-110'"
+      >
         <span
-          class="absolute left-0 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
-          :class="showFabMenu ? 'top-2 rotate-45' : 'top-0'"
+          class="absolute block w-0.5 h-full bg-white rounded-full transition-colors"
         ></span>
         <span
-          class="absolute left-0 top-2 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
-          :class="showFabMenu ? 'opacity-0 translate-x-3' : 'opacity-100'"
-        ></span>
-        <span
-          class="absolute left-0 block w-full h-0.5 bg-white transition-all duration-300 ease-in-out rounded-full"
-          :class="showFabMenu ? 'top-2 -rotate-45' : 'top-4'"
+          class="absolute block w-full h-0.5 bg-white rounded-full transition-colors"
         ></span>
       </div>
     </button>

@@ -47,5 +47,24 @@ export const useReviewUtils = () => {
     return null;
   };
 
-  return { formatName, getStatus, getComment, getReceiptKey, extractFileId };
+  const formatHeader = (header) => {
+    if (!header) return "";
+    const lowerHeader = header.toLowerCase().trim();
+
+    // Intercept the specific long table question
+    if (lowerHeader.includes("what table would you love to sit at")) {
+      return "Table Choice";
+    }
+
+    return header;
+  };
+
+  return {
+    formatName,
+    getStatus,
+    getComment,
+    getReceiptKey,
+    extractFileId,
+    formatHeader,
+  };
 };
