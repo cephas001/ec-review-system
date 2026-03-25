@@ -342,7 +342,7 @@ const countDynamicAttribute = (keyword) => {
       // Force everything to lowercase and remove spaces for perfect grouping!
       val = val.toString().trim().toLowerCase();
 
-      if (val && val !== "—" && val !== "n/a") {
+      if (val && val !== "—") {
         counts[val] = (counts[val] || 0) + 1;
       }
     }
