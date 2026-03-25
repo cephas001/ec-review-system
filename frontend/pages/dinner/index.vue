@@ -3,6 +3,7 @@
     <ReviewHeader
       :loading="loading"
       @refresh="fetchApplications"
+      @go-analytics="navigateTo('/dinner/analytics')"
       titleText="Workers Dinner Review"
     />
 

@@ -40,8 +40,7 @@
         <NuxtLink
           to="/"
           @click="isSidebarOpen = false"
-          class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-black hover:bg-gray-50"
-          active-class="bg-gray-100 text-black font-semibold"
+          :class="`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors hover:text-black hover:bg-gray-50  ${checkActiveRoute('/') ? 'bg-gray-100 text-black' : 'text-gray-600'}`"
         >
           <svg
             class="mr-3 h-5 w-5 opacity-75"
@@ -62,8 +61,7 @@
         <NuxtLink
           to="/dinner"
           @click="isSidebarOpen = false"
-          class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-black hover:bg-gray-50"
-          active-class="bg-gray-100 text-black font-semibold"
+          :class="`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors  hover:bg-gray-50  hover:text-black ${checkActiveRoute('/dinner') ? 'bg-gray-100 text-black' : 'text-gray-600'}`"
         >
           <svg
             class="mr-3 h-5 w-5 opacity-75"
@@ -82,10 +80,30 @@
         </NuxtLink>
 
         <NuxtLink
+          to="/dinner/analytics"
+          @click="isSidebarOpen = false"
+          :class="`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors hover:text-black hover:bg-gray-50 ${checkActiveRoute('/dinner/analytics') ? 'bg-gray-100 text-black' : 'text-gray-600'}`"
+        >
+          <svg
+            class="mr-3 h-5 w-5 opacity-75"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          Dinner Analytics
+        </NuxtLink>
+
+        <NuxtLink
           to="/merch"
           @click="isSidebarOpen = false"
-          class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-black hover:bg-gray-50"
-          active-class="bg-gray-100 text-black font-semibold"
+          :class="`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors hover:text-black hover:bg-gray-50 ${checkActiveRoute('/merch') ? 'bg-gray-100 text-black' : 'text-gray-600'}`"
         >
           <svg
             class="mr-3 h-5 w-5 opacity-75"
@@ -101,6 +119,27 @@
             />
           </svg>
           EC Merch
+        </NuxtLink>
+
+        <NuxtLink
+          to="/merch/analytics"
+          @click="isSidebarOpen = false"
+          :class="`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors hover:text-black hover:bg-gray-50 ${checkActiveRoute('/merch/analytics') ? 'bg-gray-100 text-black' : 'text-gray-600'}`"
+        >
+          <svg
+            class="mr-3 h-5 w-5 opacity-75"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          Merch Analytics
         </NuxtLink>
       </nav>
 
@@ -128,7 +167,7 @@
         </button>
 
         <NuxtLink
-          to="/register"
+          to="/auth/register"
           @click="isSidebarOpen = false"
           class="mt-3 text-xs text-gray-400 hover:text-gray-700 transition-colors font-medium cursor-pointer"
         >
@@ -174,8 +213,10 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
+import { useRoute } from "#vue-router";
 
 const auth = useAuthStore();
+const route = useRoute();
 
 // Track if the mobile sidebar is open
 const isSidebarOpen = ref(false);
@@ -186,6 +227,10 @@ const userInitial = computed(() => {
   }
   return "R";
 });
+
+const checkActiveRoute = (url) => {
+  return route.path == url;
+};
 
 function handleLogout() {
   auth.logout();

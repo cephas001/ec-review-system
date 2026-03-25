@@ -3,6 +3,7 @@
     <ReviewHeader
       :loading="loading"
       @refresh="fetchApplications"
+      @go-analytics="navigateTo('/merch/analytics')"
       titleText="Merchandise Review"
     />
 
