@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { useRuntimeConfig, useCookie } from "#app";
 import { useReviewUtils } from "~/composables/useReviewUtils";
+import { useAuthStore } from "~/stores/auth";
 
 export const useReviewQueue = (endpoint, options = {}) => {
   const config = useRuntimeConfig();
@@ -158,8 +159,17 @@ export const useReviewQueue = (endpoint, options = {}) => {
 
     const app = applications.value[rowIndexInArray];
 
-    // Base body
-    const body = { rowIndex, status: newStatus, comment: reviewComment.value };
+    // 1. Grab the reviewer's email from the Pinia store
+    const authStore = useAuthStore();
+    const reviewerEmail = authStore.user?.email || "Unknown Admin";
+
+    // 2. Add reviewerEmail to the base body payload
+    const body = {
+      rowIndex,
+      status: newStatus,
+      comment: reviewComment.value,
+      reviewerEmail,
+    };
 
     // Dynamically inject Dinner-specific payload if we are on the dinner endpoint
     if (endpoint === "dinner") {
@@ -185,6 +195,7 @@ export const useReviewQueue = (endpoint, options = {}) => {
         body,
       });
 
+      // Find the correct keys dynamically in case of slight variations in the sheet
       let statusKey =
         Object.keys(app).find((k) => k.toLowerCase() === "status") || "Status";
       let commentKey =
@@ -192,9 +203,14 @@ export const useReviewQueue = (endpoint, options = {}) => {
           (k) =>
             k.toLowerCase() === "comment" || k.toLowerCase() === "comments",
         ) || "Comments";
+      let reviewerKey =
+        Object.keys(app).find((k) => k.toLowerCase() === "reviewer") ||
+        "REVIEWER";
 
+      // 3. Optimistically update the UI local state
       applications.value[rowIndexInArray][statusKey] = newStatus;
       applications.value[rowIndexInArray][commentKey] = reviewComment.value;
+      applications.value[rowIndexInArray][reviewerKey] = reviewerEmail;
 
       reviewComment.value = "";
       if (currentIndex.value >= pendingApplications.value.length) {

@@ -63,7 +63,7 @@
                   >
                     {{ formatName(value) || "—" }}
                   </p>
-                  <div class="ml-2 flex-shrink-0">
+                  <div class="ml-2 shrink-0">
                     <span
                       v-if="getWorkerMatch(value).status === 'unverified'"
                       class="flex items-center text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md font-semibold"
@@ -126,7 +126,7 @@
                       class="flex items-start text-blue-900 font-medium"
                     >
                       <svg
-                        class="w-3 h-3 mr-2 mt-1 text-blue-400 flex-shrink-0"
+                        class="w-3 h-3 mr-2 mt-1 text-blue-400 shrink-0"
                         fill="currentColor"
                         viewBox="0 0 8 8"
                       >

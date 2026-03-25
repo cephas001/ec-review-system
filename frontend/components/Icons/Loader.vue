@@ -1,6 +1,6 @@
 <template>
   <svg
-    class="h-8 w-8 text-gray-400 animate-spin"
+    :class="`h-${props.height} w-${props.width} text-gray-400 animate-spin ${props.class}`"
     fill="none"
     viewBox="0 0 24 24"
   >
@@ -19,3 +19,20 @@
     ></path>
   </svg>
 </template>
+
+<script setup>
+const props = defineProps({
+  width: {
+    default: 8,
+    required: false,
+  },
+  height: {
+    default: 8,
+    required: false,
+  },
+  class: {
+    default: "",
+    required: false,
+  },
+});
+</script>

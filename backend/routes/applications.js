@@ -123,6 +123,7 @@ router.patch("/:type/status", async (req, res) => {
       applicantEmail,
       applicantName,
       tableChoice,
+      reviewerEmail,
     } = req.body;
 
     if (!rowIndex || !status) {
@@ -153,9 +154,12 @@ router.patch("/:type/status", async (req, res) => {
         h.trim().toLowerCase() === "comment",
     );
 
-    // NEW: Find or create the Email Status column
     let emailStatusColIndex = headers.findIndex(
       (h) => h.trim().toLowerCase() === "email status",
+    );
+
+    let reviewerColIndex = headers.findIndex(
+      (h) => h.trim().toLowerCase() === "reviewer",
     );
 
     let headersUpdated = false;
@@ -170,11 +174,14 @@ router.patch("/:type/status", async (req, res) => {
       headers.push("Comments");
       headersUpdated = true;
     }
-
-    // Auto-heal Email Status column
     if (emailStatusColIndex === -1) {
       emailStatusColIndex = headers.length;
       headers.push("Email Status");
+      headersUpdated = true;
+    }
+    if (reviewerColIndex === -1) {
+      reviewerColIndex = headers.length;
+      headers.push("REVIEWER");
       headersUpdated = true;
     }
 
@@ -197,6 +204,13 @@ router.patch("/:type/status", async (req, res) => {
       dataToUpdate.push({
         range: "'Form Responses 1'!1:1",
         values: [[...headers]],
+      });
+    }
+
+    if (reviewerEmail) {
+      dataToUpdate.push({
+        range: `'Form Responses 1'!${getColumnLetter(reviewerColIndex)}${rowIndex}`,
+        values: [[reviewerEmail]],
       });
     }
 
