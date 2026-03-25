@@ -247,7 +247,9 @@
       :row="selectedRow"
       :headers="dataHeaders"
       :receiptUrl="selectedReceiptUrl"
+      :updatingRow="updatingRow"
       @close="isModalOpen = false"
+      @update-status="handleModalStatusUpdate"
     />
 
     <ReviewFabMenu
@@ -268,7 +270,7 @@ import { useReviewQueue } from "~/composables/useReviewQueue";
 import { useWorkerSearch } from "~/composables/useWorkerSearch";
 import { useReviewUtils } from "~/composables/useReviewUtils";
 
-const { formatName, getWhatsAppLink } = useReviewUtils();
+const { formatName, getWhatsAppLink, getComment } = useReviewUtils();
 
 // Initialize the queue specifically for 'dinner'
 const {
@@ -317,6 +319,17 @@ watch(currentTab, (newTab) => {
     fetchApplications();
   }
 });
+
+const handleModalStatusUpdate = async (newStatus) => {
+  // Pre-fill the existing comment so it doesn't get erased during the correction
+  reviewComment.value = getComment(selectedRow.value) || "";
+
+  // Make the API call
+  await updateStatus(selectedRow.value._rowIndex, newStatus);
+
+  // Close the modal once the database finishes updating
+  isModalOpen.value = false;
+};
 
 onMounted(() => {
   fetchApplications();

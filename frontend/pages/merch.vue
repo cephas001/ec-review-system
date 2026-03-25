@@ -96,7 +96,9 @@
       :row="selectedRow"
       :headers="dataHeaders"
       :receiptUrl="selectedReceiptUrl"
+      :updatingRow="updatingRow"
       @close="isModalOpen = false"
+      @update-status="handleModalStatusUpdate"
     />
 
     <ReviewFabMenu
@@ -114,6 +116,9 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useReviewQueue } from "~/composables/useReviewQueue";
+import { useReviewUtils } from "~/composables/useReviewUtils";
+
+const { getComment } = useReviewUtils();
 
 // Initialize the queue specifically for 'merch'
 const {
@@ -143,8 +148,11 @@ const {
   hiddenColumns: ["Reviewer"],
 });
 
-// Local UI state
-const showFabMenu = ref(false);
+const handleModalStatusUpdate = async (newStatus) => {
+  reviewComment.value = getComment(selectedRow.value) || "";
+  await updateStatus(selectedRow.value._rowIndex, newStatus);
+  isModalOpen.value = false;
+};
 
 onMounted(() => fetchApplications());
 </script>

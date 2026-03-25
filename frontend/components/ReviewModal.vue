@@ -31,11 +31,11 @@
       </button>
 
       <div
-        class="flex-1 p-6 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100"
+        class="flex-1 p-6 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-100 flex flex-col"
       >
         <h3 class="text-lg font-bold text-gray-900 mb-6">Review Details</h3>
 
-        <div class="space-y-4">
+        <div class="space-y-4 flex-1">
           <div v-for="header in headers" :key="header">
             <span class="block text-xs font-semibold text-gray-400 uppercase">{{
               formatHeader(header)
@@ -52,8 +52,7 @@
               <a
                 v-if="
                   (header.toLowerCase().includes('phone') ||
-                    header.toLowerCase().includes('whatsapp') ||
-                    header.toLowerCase().includes('number')) &&
+                    header.toLowerCase().includes('whatsapp')) &&
                   row[header]
                 "
                 :href="getWhatsAppLink(row[header])"
@@ -78,10 +77,36 @@
             }}</span>
           </div>
         </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-100">
+          <p
+            class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3 text-center"
+          >
+            Correct Application Status
+          </p>
+          <div class="flex gap-3">
+            <button
+              v-if="getStatus(row) !== 'approved'"
+              :disabled="updatingRow === row._rowIndex"
+              @click="$emit('update-status', 'Approved')"
+              class="flex-1 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-black disabled:opacity-50 transition-colors"
+            >
+              {{ updatingRow === row._rowIndex ? "Saving..." : "Approve" }}
+            </button>
+            <button
+              v-if="getStatus(row) !== 'rejected'"
+              :disabled="updatingRow === row._rowIndex"
+              @click="$emit('update-status', 'Rejected')"
+              class="flex-1 bg-red-50 text-red-600 border border-red-100 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-red-100 disabled:opacity-50 transition-colors"
+            >
+              {{ updatingRow === row._rowIndex ? "Saving..." : "Reject" }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div
-        class="flex-1 bg-gray-50 border-t-gray-200 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150 relative"
+        class="flex-1 bg-gray-50 p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] md:min-h-150 relative"
       >
         <ReceiptViewer :receiptUrl="receiptUrl" />
       </div>
@@ -91,7 +116,8 @@
 
 <script setup>
 import { useReviewUtils } from "~/composables/useReviewUtils";
-const { formatName, getComment, formatHeader, getWhatsAppLink } =
+// Grab getStatus so we know which button to hide
+const { formatName, getComment, formatHeader, getWhatsAppLink, getStatus } =
   useReviewUtils();
 
 defineProps({
@@ -99,7 +125,9 @@ defineProps({
   row: { type: Object, default: null },
   headers: { type: Array, default: () => [] },
   receiptUrl: { type: String, default: null },
+  updatingRow: { type: Number, default: null }, // Added to handle loading states
 });
 
-defineEmits(["close"]);
+// We emit update-status to tell the parent page to make the API call
+defineEmits(["close", "update-status"]);
 </script>

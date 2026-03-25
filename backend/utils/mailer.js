@@ -114,9 +114,6 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
     }
 
     const result = await response.json();
-    console.log(
-      `Customized ${tableChoice} ticket successfully sent to ${recipientEmail} (Message ID: ${result.messageId})`,
-    );
     return true;
   } catch (error) {
     console.error(`Failed to send email to ${recipientEmail}:`, error);
