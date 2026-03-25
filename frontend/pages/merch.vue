@@ -140,7 +140,7 @@ const {
   fetchApplications,
   updateStatus,
 } = useReviewQueue("merch", {
-  hiddenColumns: ["COLOR OF T-SHIRT", "SIZE OF T-SHIRT"],
+  hiddenColumns: ["COLOR OF T-SHIRT", "SIZE OF T-SHIRT", "Reviewer"],
 });
 
 // Local UI state
