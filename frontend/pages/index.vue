@@ -50,7 +50,7 @@
             Review Queue
           </NuxtLink>
           <NuxtLink
-            to="/dinner-analytics"
+            to="/dinner/analytics"
             class="flex-1 bg-gray-50 text-gray-700 text-center py-2.5 px-4 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors"
           >
             View Analytics
@@ -95,7 +95,7 @@
             Review Queue
           </NuxtLink>
           <NuxtLink
-            to="/merch-analytics"
+            to="/merch/analytics"
             class="flex-1 bg-gray-50 text-gray-700 text-center py-2.5 px-4 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors"
           >
             View Analytics
