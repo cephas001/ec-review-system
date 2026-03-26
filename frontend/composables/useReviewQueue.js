@@ -1,7 +1,8 @@
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRuntimeConfig, useCookie } from "#app";
 import { useReviewUtils } from "~/composables/useReviewUtils";
 import { useAuthStore } from "~/stores/auth";
+import Fuse from "fuse.js";
 
 export const useReviewQueue = (endpoint, options = {}) => {
   const config = useRuntimeConfig();
@@ -22,6 +23,7 @@ export const useReviewQueue = (endpoint, options = {}) => {
   const isModalOpen = ref(false);
   const selectedRow = ref(null);
   const resendingRows = ref([]); // Specifically used by Dinner
+  const searchQuery = ref("");
 
   // --- Navigation ---
   const nextApp = () => {
@@ -44,8 +46,34 @@ export const useReviewQueue = (endpoint, options = {}) => {
   };
 
   // --- Computed Lists ---
+  const fuse = computed(() => {
+    if (applications.value.length === 0) return null;
+
+    // Dynamically grab all columns, ignoring internal keys AND the hidden Reviewer column
+    const searchableKeys = Object.keys(applications.value[0]).filter(
+      (k) => !k.startsWith("_") && k.toLowerCase() !== "reviewer",
+    );
+
+    return new Fuse(applications.value, {
+      keys: searchableKeys,
+      threshold: 0.3,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+    });
+  });
+
+  const filteredApplications = computed(() => {
+    if (!searchQuery.value.trim() || !fuse.value) {
+      return applications.value;
+    }
+
+    // Fuse returns an array of { item, refIndex } objects, so we map it back to just the items
+    const results = fuse.value.search(searchQuery.value);
+    return results.map((result) => result.item);
+  });
+
   const pendingApplications = computed(() =>
-    applications.value.filter((app) => {
+    filteredApplications.value.filter((app) => {
       const status = getStatus(app);
       return status !== "approved" && status !== "rejected";
     }),
@@ -53,18 +81,26 @@ export const useReviewQueue = (endpoint, options = {}) => {
 
   const currentApp = computed(() => {
     if (pendingApplications.value.length === 0) return null;
-    if (currentIndex.value >= pendingApplications.value.length) {
-      currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
-    }
-    return pendingApplications.value[currentIndex.value];
+
+    const safeIndex = Math.min(
+      currentIndex.value,
+      pendingApplications.value.length - 1,
+    );
+
+    return pendingApplications.value[safeIndex];
   });
 
   const approvedApplications = computed(() =>
-    applications.value.filter((app) => getStatus(app) === "approved"),
+    filteredApplications.value.filter((app) => getStatus(app) === "approved"),
   );
+
   const rejectedApplications = computed(() =>
-    applications.value.filter((app) => getStatus(app) === "rejected"),
+    filteredApplications.value.filter((app) => getStatus(app) === "rejected"),
   );
+
+  watch(searchQuery, () => {
+    currentIndex.value = 0;
+  });
 
   // Dinner-specific computed (safely returns empty if not applicable)
   const unsentApplications = computed(() =>
@@ -268,6 +304,8 @@ export const useReviewQueue = (endpoint, options = {}) => {
 
   return {
     applications,
+    filteredApplications,
+    searchQuery,
     loading,
     updatingRow,
     currentTab,

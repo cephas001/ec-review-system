@@ -7,6 +7,8 @@
       titleText="Merchandise Review"
     />
 
+    <SearchBar v-model="searchQuery" placeholder="Search..." />
+
     <div class="border-b border-gray-200 mb-6">
       <ReviewNav
         :currentTab="currentTab"
@@ -124,6 +126,7 @@ const { getComment } = useReviewUtils();
 // Initialize the queue specifically for 'merch'
 const {
   applications,
+  searchQuery,
   loading,
   updatingRow,
   currentTab,

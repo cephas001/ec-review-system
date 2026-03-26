@@ -7,6 +7,8 @@
       titleText="Workers Dinner Review"
     />
 
+    <SearchBar v-model="searchQuery" placeholder="Search..." />
+
     <div class="mb-6 w-full">
       <ReviewNav
         :currentTab="currentTab"
@@ -276,6 +278,7 @@ const { formatName, getWhatsAppLink, getComment } = useReviewUtils();
 // Initialize the queue specifically for 'dinner'
 const {
   applications, // <--- ADDED THIS BACK IN!
+  searchQuery,
   loading,
   updatingRow,
   currentTab,
@@ -310,9 +313,6 @@ const {
 // Initialize Worker Search
 const { openNameDropdowns, fetchWorkers, getWorkerMatch, toggleNameDropdown } =
   useWorkerSearch();
-
-// Local UI state
-const showFabMenu = ref(false);
 
 // Watch for tab changes and trigger a fresh data pull for the 'unsent' tab
 watch(currentTab, (newTab) => {
