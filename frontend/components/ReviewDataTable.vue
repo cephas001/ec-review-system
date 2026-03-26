@@ -9,7 +9,7 @@
             <th
               v-for="header in headers"
               :key="header"
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap"
+              class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap"
             >
               {{ formatHeader(header) }}
             </th>
@@ -23,7 +23,7 @@
               :colspan="
                 $slots['header-action'] ? headers.length + 1 : headers.length
               "
-              class="px-6 py-12 text-center text-sm text-gray-500"
+              class="px-4 py-12 text-center text-sm text-gray-500"
             >
               <slot name="empty-state">No applications found.</slot>
             </td>
@@ -38,7 +38,7 @@
             <td
               v-for="header in headers"
               :key="header"
-              class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap"
+              class="px-4 py-4 text-xs text-gray-700 whitespace-nowrap"
             >
               {{
                 header.toLowerCase().includes("name")

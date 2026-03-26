@@ -43,7 +43,7 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
 
     // TRUE CENTERING MATH:
     const centerX = image.bitmap.width * 0.63;
-    const centerY = image.bitmap.height * 0.565;
+    const centerY = image.bitmap.height * 0.563;
 
     // Calculate top-left starting points by subtracting half the box size
     const tagX = centerX - boxWidth / 2;
