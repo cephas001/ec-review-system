@@ -3,6 +3,7 @@ import { useRuntimeConfig, useCookie } from "#app";
 import { useReviewUtils } from "~/composables/useReviewUtils";
 import { useAuthStore } from "~/stores/auth";
 import Fuse from "fuse.js";
+import { useAlertModal } from "~/composables/useAlertModal";
 
 export const useReviewQueue = (endpoint, options = {}) => {
   const config = useRuntimeConfig();
@@ -10,6 +11,7 @@ export const useReviewQueue = (endpoint, options = {}) => {
   const { formatName, getStatus, getReceiptKey, extractFileId } =
     useReviewUtils();
   const { hiddenColumns = [] } = options; // Destructure the hidden columns, default to empty
+  const { showAlert } = useAlertModal();
 
   // --- Shared State ---
   const applications = ref([]);
@@ -168,14 +170,12 @@ export const useReviewQueue = (endpoint, options = {}) => {
     try {
       const response = await $fetch(
         `${config.public.apiBase}/applications/${endpoint}`,
-        {
-          headers: { Authorization: `Bearer ${token.value}` },
-        },
       );
       applications.value = response.data;
     } catch (err) {
-      console.error(err);
-      alert("Failed to load data.");
+      if (err.response?._handledGlobally) return;
+
+      showAlert("Failed to load data.", "error");
     } finally {
       loading.value = false;
     }
@@ -253,8 +253,9 @@ export const useReviewQueue = (endpoint, options = {}) => {
         currentIndex.value = Math.max(0, pendingApplications.value.length - 1);
       }
     } catch (err) {
-      alert(err.data?.error || "Failed to update status.");
-      console.error(err);
+      if (err.response?._handledGlobally) return;
+
+      showAlert(err.data?.error || "Failed to update status.", "error");
     } finally {
       updatingRow.value = null;
     }
@@ -288,13 +289,16 @@ export const useReviewQueue = (endpoint, options = {}) => {
         Object.keys(row).find((k) => k.toLowerCase() === "email status") ||
         "Email Status";
       row[emailStatusKey] = "Sent";
-      alert("Success! Ticket has been emailed.");
+      showAlert("Success! Ticket has been emailed.", "success");
     } catch (err) {
       let emailStatusKey =
         Object.keys(row).find((k) => k.toLowerCase() === "email status") ||
         "Email Status";
       row[emailStatusKey] = "Failed";
-      alert(err.data?.error || "Failed to send email.");
+
+      if (err.response?._handledGlobally) return;
+
+      showAlert(err.data?.error || "Failed to send email.", "error");
     } finally {
       resendingRows.value = resendingRows.value.filter(
         (id) => id !== row._rowIndex,

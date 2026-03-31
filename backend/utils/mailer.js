@@ -51,13 +51,57 @@ const sendTicketEmail = async (recipientEmail, applicantName, tableChoice) => {
 
     // Create the sleek white tag
     const whiteTag = await new Promise((resolve, reject) => {
-      new Jimp(boxWidth, boxHeight, "#FFFFFF", (err, img) => {
-        if (err) reject(err);
-        else resolve(img);
+      // 0xFFFFFFFF is solid white with full opacity (RGBA)
+      new Jimp(boxWidth, boxHeight, 0xffffffff, (err, img) => {
+        if (err) return reject(err);
+
+        // This 'r' controls your border-radius.
+        // 8 to 12 is usually the sweet spot for a Tailwind 'rounded-md' or 'rounded-lg' look.
+        const r = 10;
+        const w = boxWidth;
+        const h = boxHeight;
+
+        // Scan every pixel in the white box
+        img.scan(0, 0, w, h, function (x, y, idx) {
+          let cx, cy;
+          let isCorner = false;
+
+          // Detect if the current pixel is inside one of the 4 corners
+          if (x < r && y < r) {
+            cx = r;
+            cy = r;
+            isCorner = true; // Top-left
+          } else if (x >= w - r && y < r) {
+            cx = w - r - 1;
+            cy = r;
+            isCorner = true; // Top-right
+          } else if (x < r && y >= h - r) {
+            cx = r;
+            cy = h - r - 1;
+            isCorner = true; // Bottom-left
+          } else if (x >= w - r && y >= h - r) {
+            cx = w - r - 1;
+            cy = h - r - 1;
+            isCorner = true; // Bottom-right
+          }
+
+          // If it's a corner pixel, calculate its distance from the corner's center point
+          if (isCorner) {
+            const distance = Math.sqrt(
+              Math.pow(x - cx, 2) + Math.pow(y - cy, 2),
+            );
+            // If the pixel falls outside the radius, set its Alpha channel to 0 (transparent)
+            if (distance > r) {
+              this.bitmap.data[idx + 3] = 0;
+            }
+          }
+        });
+
+        resolve(img);
       });
     });
 
-    // Paste the tag and print the text
+    // Paste the tag and print the text (unchanged)
     image.composite(whiteTag, tagX, tagY);
     image.print(font, tagX + paddingX / 2, tagY + paddingY / 2, text);
 

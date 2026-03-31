@@ -3,15 +3,16 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const { verifyToken, requireSuperAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
-// --- REGISTER ROUTE ---
-router.post("/register", async (req, res) => {
+// --- REGISTER ROUTE (PROTECTED: ONLY SUPER ADMINS CAN ACCESS) ---
+router.post("/register", verifyToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    // Now accepting role and type from the request body!
+    const { name, email, password, role = "admin", type = "dinner" } = req.body;
 
-    // 1. Check if the reviewer already exists
     const userCheck = await db.query(
       "SELECT * FROM reviewers WHERE email = $1",
       [email],
@@ -22,14 +23,13 @@ router.post("/register", async (req, res) => {
         .json({ error: "Reviewer with this email already exists." });
     }
 
-    // 2. Hash the password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // 3. Insert the new reviewer into the database
+    // Insert the new reviewer WITH role and type
     const newUser = await db.query(
-      "INSERT INTO reviewers (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, role",
-      [name, email, passwordHash],
+      "INSERT INTO reviewers (name, email, password_hash, role, type) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, type",
+      [name, email, passwordHash, role, type],
     );
 
     res.status(201).json({
@@ -47,7 +47,6 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find the reviewer
     const userResult = await db.query(
       "SELECT * FROM reviewers WHERE email = $1",
       [email],
@@ -57,17 +56,16 @@ router.post("/login", async (req, res) => {
     }
     const user = userResult.rows[0];
 
-    // 2. Compare the passwords
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    // 3. Generate the JWT token
+    // Include TYPE in the JWT token payload!
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: user.role, type: user.type },
       process.env.JWT_SECRET,
-      { expiresIn: "8h" }, // Token expires in 8 hours
+      { expiresIn: "8h" },
     );
 
     res.status(200).json({
@@ -78,6 +76,7 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        type: user.type, // Send type back to frontend state
       },
     });
   } catch (error) {

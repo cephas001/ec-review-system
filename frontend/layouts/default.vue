@@ -167,6 +167,7 @@
         </button>
 
         <NuxtLink
+          v-if="auth.user?.role === 'super_admin'"
           to="/auth/register"
           @click="isSidebarOpen = false"
           class="mt-3 text-xs text-gray-400 hover:text-gray-700 transition-colors font-medium cursor-pointer"
@@ -207,6 +208,9 @@
         <slot />
       </div>
     </main>
+
+    <ForbiddenModal />
+    <AlertModal />
   </div>
 </template>
 

@@ -4,6 +4,8 @@ const { sheets, drive } = require("../config/google");
 const router = express.Router();
 const { sendTicketEmail } = require("../utils/mailer");
 
+const { verifyToken, requireDynamicTypeAccess } = require("../middleware/auth");
+
 // Helper function to convert Google Sheets array data into JSON objects
 const formatSheetData = (rows) => {
   if (!rows || rows.length === 0) return [];
@@ -21,8 +23,8 @@ const formatSheetData = (rows) => {
 };
 
 // backend/routes/applications.js (or wherever your routes are)
-// 1. SPECIFIC ROUTE GOES FIRST
-router.get("/workers", async (req, res) => {
+// 1. SPECIFIC ROUTE GOES FIRST (Basic authentication required)
+router.get("/workers", verifyToken, async (req, res) => {
   try {
     // Fetch both the Workers and Executives sheets simultaneously
     const [workersResponse, execsResponse] = await Promise.all([
@@ -54,7 +56,7 @@ router.get("/workers", async (req, res) => {
     const executives = formatData(execsResponse.data.values);
 
     // Merge both arrays into one master list
-    const combinedDatabase = [...workers, ...executives]; // Note: Fixed small typo here (execs -> executives)
+    const combinedDatabase = [...workers, ...executives];
 
     res.status(200).json({ data: combinedDatabase });
   } catch (error) {
@@ -63,9 +65,9 @@ router.get("/workers", async (req, res) => {
   }
 });
 
-// --- GET ALL APPLICATIONS ---
+// --- GET ALL APPLICATIONS (Protected by Type) ---
 // We use a dynamic parameter /:type to handle both 'dinner' and 'merch'
-router.get("/:type", async (req, res) => {
+router.get("/:type", verifyToken, async (req, res) => {
   try {
     const { type } = req.params;
     let spreadsheetId = "";
@@ -77,9 +79,9 @@ router.get("/:type", async (req, res) => {
     } else if (type === "merch") {
       spreadsheetId = process.env.SHEET_ID_MERCH;
     } else {
-      return res
-        .status(400)
-        .json({ error: 'Invalid application type. Use "dinner" or "merch".' });
+      return res.status(400).json({
+        error: 'Invalid application type. Use "dinner" or "merch".',
+      });
     }
 
     // Fetch the data from Google Sheets
@@ -113,163 +115,168 @@ const getColumnLetter = (colIndex) => {
   return letter;
 };
 
-router.patch("/:type/status", async (req, res) => {
-  try {
-    const { type } = req.params;
-    const {
-      rowIndex,
-      status,
-      comment,
-      applicantEmail,
-      applicantName,
-      tableChoice,
-      reviewerEmail,
-    } = req.body;
+// --- UPDATE STATUS (Protected by Type) ---
+router.patch(
+  "/:type/status",
+  verifyToken,
+  requireDynamicTypeAccess,
+  async (req, res) => {
+    try {
+      const { type } = req.params;
+      const {
+        rowIndex,
+        status,
+        comment,
+        applicantEmail,
+        applicantName,
+        tableChoice,
+        reviewerEmail,
+      } = req.body;
 
-    if (!rowIndex || !status) {
-      return res.status(400).json({ error: "Missing rowIndex or status." });
-    }
+      if (!rowIndex || !status) {
+        return res.status(400).json({ error: "Missing rowIndex or status." });
+      }
 
-    let spreadsheetId =
-      type === "dinner"
-        ? process.env.SHEET_ID_DINNER
-        : process.env.SHEET_ID_MERCH;
+      let spreadsheetId =
+        type === "dinner"
+          ? process.env.SHEET_ID_DINNER
+          : process.env.SHEET_ID_MERCH;
 
-    // 1. Fetch headers to dynamically find columns
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "'Form Responses 1'!1:1",
-    });
-
-    const headers = headerResponse.data.values
-      ? headerResponse.data.values[0]
-      : [];
-
-    let statusColIndex = headers.findIndex(
-      (h) => h.trim().toLowerCase() === "status",
-    );
-    let commentColIndex = headers.findIndex(
-      (h) =>
-        h.trim().toLowerCase() === "comments" ||
-        h.trim().toLowerCase() === "comment",
-    );
-
-    let emailStatusColIndex = headers.findIndex(
-      (h) => h.trim().toLowerCase() === "email status",
-    );
-
-    let reviewerColIndex = headers.findIndex(
-      (h) => h.trim().toLowerCase() === "reviewer",
-    );
-
-    let headersUpdated = false;
-
-    if (statusColIndex === -1) {
-      statusColIndex = headers.length;
-      headers.push("Status");
-      headersUpdated = true;
-    }
-    if (commentColIndex === -1) {
-      commentColIndex = headers.length;
-      headers.push("Comments");
-      headersUpdated = true;
-    }
-    if (emailStatusColIndex === -1) {
-      emailStatusColIndex = headers.length;
-      headers.push("Email Status");
-      headersUpdated = true;
-    }
-    if (reviewerColIndex === -1) {
-      reviewerColIndex = headers.length;
-      headers.push("REVIEWER");
-      headersUpdated = true;
-    }
-
-    // 2. Prepare the Initial Batch Update (Status & Comment)
-    const dataToUpdate = [];
-
-    dataToUpdate.push({
-      range: `'Form Responses 1'!${getColumnLetter(statusColIndex)}${rowIndex}`,
-      values: [[status]],
-    });
-
-    if (comment !== undefined && comment !== null) {
-      dataToUpdate.push({
-        range: `'Form Responses 1'!${getColumnLetter(commentColIndex)}${rowIndex}`,
-        values: [[comment]],
-      });
-    }
-
-    if (headersUpdated) {
-      dataToUpdate.push({
+      // 1. Fetch headers to dynamically find columns
+      const headerResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId,
         range: "'Form Responses 1'!1:1",
-        values: [[...headers]],
       });
-    }
 
-    if (reviewerEmail) {
+      const headers = headerResponse.data.values
+        ? headerResponse.data.values[0]
+        : [];
+
+      let statusColIndex = headers.findIndex(
+        (h) => h.trim().toLowerCase() === "status",
+      );
+      let commentColIndex = headers.findIndex(
+        (h) =>
+          h.trim().toLowerCase() === "comments" ||
+          h.trim().toLowerCase() === "comment",
+      );
+
+      let emailStatusColIndex = headers.findIndex(
+        (h) => h.trim().toLowerCase() === "email status",
+      );
+
+      let reviewerColIndex = headers.findIndex(
+        (h) => h.trim().toLowerCase() === "reviewer",
+      );
+
+      let headersUpdated = false;
+
+      if (statusColIndex === -1) {
+        statusColIndex = headers.length;
+        headers.push("Status");
+        headersUpdated = true;
+      }
+      if (commentColIndex === -1) {
+        commentColIndex = headers.length;
+        headers.push("Comments");
+        headersUpdated = true;
+      }
+      if (emailStatusColIndex === -1) {
+        emailStatusColIndex = headers.length;
+        headers.push("Email Status");
+        headersUpdated = true;
+      }
+      if (reviewerColIndex === -1) {
+        reviewerColIndex = headers.length;
+        headers.push("REVIEWER");
+        headersUpdated = true;
+      }
+
+      // 2. Prepare the Initial Batch Update (Status & Comment)
+      const dataToUpdate = [];
+
       dataToUpdate.push({
-        range: `'Form Responses 1'!${getColumnLetter(reviewerColIndex)}${rowIndex}`,
-        values: [[reviewerEmail]],
+        range: `'Form Responses 1'!${getColumnLetter(statusColIndex)}${rowIndex}`,
+        values: [[status]],
       });
-    }
 
-    // 3. Execute Initial Update
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId,
-      requestBody: {
-        valueInputOption: "USER_ENTERED",
-        data: dataToUpdate,
-      },
-    });
+      if (comment !== undefined && comment !== null) {
+        dataToUpdate.push({
+          range: `'Form Responses 1'!${getColumnLetter(commentColIndex)}${rowIndex}`,
+          values: [[comment]],
+        });
+      }
 
-    // ==========================================
-    // 4. SEND RESPONSE TO FRONTEND IMMEDIATELY (Unblocks UI)
-    // ==========================================
-    res.status(200).json({
-      message: `Successfully updated row ${rowIndex} (Status: ${status})`,
-    });
+      if (headersUpdated) {
+        dataToUpdate.push({
+          range: "'Form Responses 1'!1:1",
+          values: [[...headers]],
+        });
+      }
 
-    // ==========================================
-    // 5. BACKGROUND TASK: Send Email & Update Sheet
-    // ==========================================
-    if (type === "dinner" && status === "Approved" && applicantEmail) {
-      // Call the mailer WITHOUT awaiting it in the main thread
-      sendTicketEmail(applicantEmail, applicantName, tableChoice)
-        .then(async (emailSentSuccessfully) => {
-          const mailStatusText = emailSentSuccessfully ? "Sent" : "Failed";
-          const cellRange = `'Form Responses 1'!${getColumnLetter(emailStatusColIndex)}${rowIndex}`;
+      if (reviewerEmail) {
+        dataToUpdate.push({
+          range: `'Form Responses 1'!${getColumnLetter(reviewerColIndex)}${rowIndex}`,
+          values: [[reviewerEmail]],
+        });
+      }
 
-          // Make a secondary, quiet API call to update just the Email Status cell
-          await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range: cellRange,
-            valueInputOption: "USER_ENTERED",
-            resource: {
-              values: [[mailStatusText]],
-            },
-          });
+      // 3. Execute Initial Update
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          valueInputOption: "USER_ENTERED",
+          data: dataToUpdate,
+        },
+      });
 
-          console.log(
-            `Background update: Row ${rowIndex} Email Status set to '${mailStatusText}'`,
+      // ==========================================
+      // 4. SEND RESPONSE TO FRONTEND IMMEDIATELY (Unblocks UI)
+      // ==========================================
+      res.status(200).json({
+        message: `Successfully updated row ${rowIndex} (Status: ${status})`,
+      });
+
+      // ==========================================
+      // 5. BACKGROUND TASK: Send Email & Update Sheet
+      // ==========================================
+      if (type === "dinner" && status === "Approved" && applicantEmail) {
+        // Call the mailer WITHOUT awaiting it in the main thread
+        sendTicketEmail(applicantEmail, applicantName, tableChoice)
+          .then(async (emailSentSuccessfully) => {
+            const mailStatusText = emailSentSuccessfully ? "Sent" : "Failed";
+            const cellRange = `'Form Responses 1'!${getColumnLetter(emailStatusColIndex)}${rowIndex}`;
+
+            // Make a secondary, quiet API call to update just the Email Status cell
+            await sheets.spreadsheets.values.update({
+              spreadsheetId,
+              range: cellRange,
+              valueInputOption: "USER_ENTERED",
+              resource: {
+                values: [[mailStatusText]],
+              },
+            });
+
+            console.log(
+              `Background update: Row ${rowIndex} Email Status set to '${mailStatusText}'`,
+            );
+          })
+          .catch((err) =>
+            console.error("Background email tracking failed:", err),
           );
-        })
-        .catch((err) =>
-          console.error("Background email tracking failed:", err),
-        );
+      }
+    } catch (error) {
+      console.error("Google Sheets update error:", error);
+      // Only send an error response if we haven't already sent a success response
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: "Failed to update status in Google Sheets." });
+      }
     }
-  } catch (error) {
-    console.error("Google Sheets update error:", error);
-    // Only send an error response if we haven't already sent a success response
-    if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ error: "Failed to update status in Google Sheets." });
-    }
-  }
-});
+  },
+);
 
-// --- GET RECEIPT MEDIA (PROXY) ---
 router.get("/receipt/:fileId", async (req, res) => {
   try {
     const { fileId } = req.params;
@@ -312,67 +319,74 @@ router.get("/receipt/:fileId", async (req, res) => {
   }
 });
 
-// Add this near your other routes in applications.js
-router.post("/:type/resend", async (req, res) => {
-  try {
-    const { type } = req.params;
-    const { rowIndex, applicantEmail, applicantName, tableChoice } = req.body;
+// --- RESEND EMAIL (Protected by Type) ---
+router.post(
+  "/:type/resend",
+  verifyToken,
+  requireDynamicTypeAccess,
+  async (req, res) => {
+    try {
+      const { type } = req.params;
+      const { rowIndex, applicantEmail, applicantName, tableChoice } = req.body;
 
-    if (!rowIndex || !applicantEmail) {
-      return res
-        .status(400)
-        .json({ error: "Missing required data to resend email." });
-    }
+      if (!rowIndex || !applicantEmail) {
+        return res
+          .status(400)
+          .json({ error: "Missing required data to resend email." });
+      }
 
-    let spreadsheetId =
-      type === "dinner"
-        ? process.env.SHEET_ID_DINNER
-        : process.env.SHEET_ID_MERCH;
+      let spreadsheetId =
+        type === "dinner"
+          ? process.env.SHEET_ID_DINNER
+          : process.env.SHEET_ID_MERCH;
 
-    // 1. Await the email generation and sending process
-    const emailSentSuccessfully = await sendTicketEmail(
-      applicantEmail,
-      applicantName,
-      tableChoice,
-    );
-    const mailStatusText = emailSentSuccessfully ? "Sent" : "Failed";
+      // 1. Await the email generation and sending process
+      const emailSentSuccessfully = await sendTicketEmail(
+        applicantEmail,
+        applicantName,
+        tableChoice,
+      );
+      const mailStatusText = emailSentSuccessfully ? "Sent" : "Failed";
 
-    // 2. Fetch headers to locate the "Email Status" column
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "'Form Responses 1'!1:1",
-    });
-
-    const headers = headerResponse.data.values
-      ? headerResponse.data.values[0]
-      : [];
-    let emailStatusColIndex = headers.findIndex(
-      (h) => h.trim().toLowerCase() === "email status",
-    );
-
-    // 3. Update the sheet
-    if (emailStatusColIndex !== -1) {
-      const cellRange = `'Form Responses 1'!${getColumnLetter(emailStatusColIndex)}${rowIndex}`;
-      await sheets.spreadsheets.values.update({
+      // 2. Fetch headers to locate the "Email Status" column
+      const headerResponse = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: cellRange,
-        valueInputOption: "USER_ENTERED",
-        resource: { values: [[mailStatusText]] },
+        range: "'Form Responses 1'!1:1",
       });
-    }
 
-    // 4. Return the result to the frontend
-    if (emailSentSuccessfully) {
-      res
-        .status(200)
-        .json({ message: "Email resent successfully", status: "Sent" });
-    } else {
-      res.status(500).json({ error: "Failed to send email", status: "Failed" });
+      const headers = headerResponse.data.values
+        ? headerResponse.data.values[0]
+        : [];
+      let emailStatusColIndex = headers.findIndex(
+        (h) => h.trim().toLowerCase() === "email status",
+      );
+
+      // 3. Update the sheet
+      if (emailStatusColIndex !== -1) {
+        const cellRange = `'Form Responses 1'!${getColumnLetter(emailStatusColIndex)}${rowIndex}`;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: cellRange,
+          valueInputOption: "USER_ENTERED",
+          resource: { values: [[mailStatusText]] },
+        });
+      }
+
+      // 4. Return the result to the frontend
+      if (emailSentSuccessfully) {
+        res
+          .status(200)
+          .json({ message: "Email resent successfully", status: "Sent" });
+      } else {
+        res
+          .status(500)
+          .json({ error: "Failed to send email", status: "Failed" });
+      }
+    } catch (error) {
+      console.error("Resend error:", error);
+      res.status(500).json({ error: "Server error while resending." });
     }
-  } catch (error) {
-    console.error("Resend error:", error);
-    res.status(500).json({ error: "Server error while resending." });
-  }
-});
+  },
+);
 
 module.exports = router;
