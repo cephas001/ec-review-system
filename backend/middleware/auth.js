@@ -1,23 +1,36 @@
 // backend/middleware/auth.js
 const jwt = require("jsonwebtoken");
+const { admin } = require("../config/firebase");
 
 // 1. Basic Token Verification (Are they logged in?)
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token)
-    return res.status(401).json({ error: "Access denied. No token provided." });
+// Example Middleware
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // 1. Check if the header exists and is formatted correctly
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: No token provided" });
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Contains id, role, and type
+    // 2. Verify the token with Firebase
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    // 3. Attach the user payload to the request
+    req.user = decodedToken;
     next();
-  } catch (err) {
-    res.status(403).json({ error: "Invalid or expired token." });
+  } catch (error) {
+    // 4. Log the actual error for your own debugging
+    console.error("Firebase Token Verification Error:", error.message);
+    res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
   }
 };
 
 // 2. Strict Super Admin Check (For registering new users)
 const requireSuperAdmin = (req, res, next) => {
+  console.log(req.user);
   if (req.user && req.user.role === "super_admin") {
     return next();
   }

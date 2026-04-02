@@ -1,8 +1,6 @@
 // backend/routes/auth.js
 const express = require("express");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const db = require("../config/db");
+const { db, auth } = require("../config/firebase");
 const { verifyToken, requireSuperAdmin } = require("../middleware/auth");
 
 const router = express.Router();
@@ -10,78 +8,84 @@ const router = express.Router();
 // --- REGISTER ROUTE (PROTECTED: ONLY SUPER ADMINS CAN ACCESS) ---
 router.post("/register", verifyToken, requireSuperAdmin, async (req, res) => {
   try {
-    // Now accepting role and type from the request body!
     const { name, email, password, role = "admin", type = "dinner" } = req.body;
 
-    const userCheck = await db.query(
-      "SELECT * FROM reviewers WHERE email = $1",
-      [email],
-    );
-    if (userCheck.rows.length > 0) {
+    // 1. Create the user in Firebase Authentication
+    // Firebase automatically checks for duplicate emails and hashes the password safely!
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    // Inside your /register route...
+    await auth.setCustomUserClaims(userRecord.uid, { role: role });
+
+    // 2. Save the extra metadata in Firestore ('reviewers' collection)
+    // We use the Firebase Auth UID (userRecord.uid) as the document ID.
+    // This perfectly links their Auth account to their database record.
+    const userData = {
+      name,
+      email,
+      role,
+      type,
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.collection("reviewers").doc(userRecord.uid).set(userData);
+
+    res.status(201).json({
+      message: "Reviewer registered successfully",
+      user: { id: userRecord.uid, ...userData },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    // Catch the specific Firebase error for duplicate emails
+    if (error.code === "auth/email-already-exists") {
       return res
         .status(400)
         .json({ error: "Reviewer with this email already exists." });
     }
-
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Insert the new reviewer WITH role and type
-    const newUser = await db.query(
-      "INSERT INTO reviewers (name, email, password_hash, role, type) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, type",
-      [name, email, passwordHash, role, type],
-    );
-
-    res.status(201).json({
-      message: "Reviewer registered successfully",
-      user: newUser.rows[0],
+    res.status(500).json({
+      error: error?.errorInfo?.message || "Server error during registration.",
     });
-  } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ error: "Server error during registration." });
   }
 });
 
 // --- LOGIN ROUTE ---
-router.post("/login", async (req, res) => {
+// Note: The frontend logs the user in directly via Firebase.
+// This route is now just for the frontend to send its token and fetch its role/type.
+router.post("/login", verifyToken, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // Thanks to your verifyToken middleware, req.user already contains the decoded Firebase token!
+    const uid = req.user.uid;
 
-    const userResult = await db.query(
-      "SELECT * FROM reviewers WHERE email = $1",
-      [email],
-    );
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-    const user = userResult.rows[0];
+    // Fetch the extra user data (role, type) from the Firestore 'reviewers' collection
+    const userDoc = await db.collection("reviewers").doc(uid).get();
 
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: "Invalid email or password." });
+    if (!userDoc.exists) {
+      return res
+        .status(404)
+        .json({ error: "User profile not found in database." });
     }
 
-    // Include TYPE in the JWT token payload!
-    const token = jwt.sign(
-      { id: user.id, role: user.role, type: user.type },
-      process.env.JWT_SECRET,
-      { expiresIn: "8h" },
-    );
+    const userData = userDoc.data();
 
+    // We no longer mint our own token, we just return the user data needed for frontend state
     res.status(200).json({
-      message: "Login successful",
-      token,
+      message: "User data synced successfully",
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        type: user.type, // Send type back to frontend state
+        id: uid,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        type: userData.type,
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Server error during login." });
+    console.error("Login sync error:", error);
+    res.status(500).json({ error: "Server error during login sync." });
   }
 });
 

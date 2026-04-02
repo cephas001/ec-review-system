@@ -102,6 +102,51 @@
           </NuxtLink>
         </div>
       </div>
+
+      <div
+        class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all duration-200 group flex flex-col"
+      >
+        <div class="flex items-center gap-4 mb-4">
+          <div
+            class="bg-purple-50 text-purple-600 p-3 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors duration-200"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+              />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-black">Website Content</h3>
+        </div>
+
+        <p class="text-sm text-gray-500 mb-8 leading-relaxed grow">
+          Manage landing page sections, update conference information, and
+          control the visibility of forms and modules.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-auto">
+          <NuxtLink
+            to="/content/manage"
+            class="flex-1 bg-black text-white text-center py-2.5 px-4 rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors"
+          >
+            Manage Pages
+          </NuxtLink>
+          <NuxtLink
+            to="/content/assets"
+            class="flex-1 bg-gray-50 text-gray-700 text-center py-2.5 px-4 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          >
+            Website Analytics
+          </NuxtLink>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -111,5 +156,5 @@ import { computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
 
 const auth = useAuthStore();
-const name = computed(() => auth.user?.name?.split(" ")[0] || "Reviewer");
+const name = computed(() => auth.user?.name?.split(" ")[0] || "Administrator");
 </script>
