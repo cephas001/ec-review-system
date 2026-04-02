@@ -4,7 +4,7 @@
 >
 > The Excellence Conference Review System has been successfully integrated as an administrative module within the main conference ecosystem. **All active development, issues, and deployments are now managed in the central monorepo:**
 >
-> 👉 **[hhttps://excellence-conference-website-admin.vercel.app/]**
+> 👉 **[https://excellence-conference-website-admin.vercel.app/]**
 >
 > _Historical context: Prior to deprecation, this system's authentication and database layers were migrated from PostgreSQL/Custom JWTs to a serverless Firebase architecture (Auth + Firestore)._
 
